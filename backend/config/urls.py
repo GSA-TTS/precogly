@@ -32,11 +32,27 @@ _authorization_server_metadata = [
     if pattern.name.startswith("oauth-server-metadata")
 ]
 
+
+def _oidc_urls():
+    from apps.core.sso_views import SsoTokenHandoffView
+
+    return [
+        path("oidc/", include("mozilla_django_oidc.urls")),
+        path("sso/handoff/", SsoTokenHandoffView.as_view(), name="sso-handoff"),
+    ]
+
+
 urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
     # Core API (health check, dashboard stats)
     path("api/", include("apps.core.urls")),
+    # Keycloak OIDC (login/callback/logout) — only mounted when the app is installed
+    *(
+        _oidc_urls()
+        if "mozilla_django_oidc" in settings.INSTALLED_APPS
+        else []
+    ),
     # Authentication
     path("api/auth/", include("dj_rest_auth.urls")),
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),

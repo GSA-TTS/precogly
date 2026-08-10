@@ -13,6 +13,7 @@ import {
   Signup,
   ForgotPassword,
   ResetPassword,
+  SsoCallback,
   SharedThreatModelView,
   AcceptInvitation,
   SettingsLayout,
@@ -50,6 +51,11 @@ export const router = createBrowserRouter([
   {
     path: '/reset-password/:uid/:token',
     element: isGuestOnly ? <GuestOnlyNotice /> : <ResetPassword />,
+  },
+  // SSO handoff: consumes access/refresh tokens from URL fragment.
+  {
+    path: '/sso-callback',
+    element: <SsoCallback />,
   },
   // Public magic link route (no auth required)
   {

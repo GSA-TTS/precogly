@@ -1,0 +1,128 @@
+---
+# Precogly on cloud.gov — Keycloak-based auth (native buildpacks; no docker registry).
+#
+# Three apps:
+#   1. <auth-app>       → Keycloak       (public route, RDS-backed)
+#   2. <backend-app>    → Django backend (public API/admin/OIDC on <api-host>)
+#   3. <frontend-app>   → Vite SPA       (public route <spa-host>, staticfile buildpack)
+#
+# Substitute the following placeholders for your own cloud.gov org/space before pushing:
+#   <auth-app>        e.g. myapp-auth
+#   <backend-app>     e.g. myapp
+#   <frontend-app>    e.g. myapp-frontend
+#   <auth-host>       public route for Keycloak,        e.g. myapp-auth.app.cloud.gov
+#   <api-host>        public route for Django API,      e.g. myapp-api.app.cloud.gov
+#   <spa-host>        public route for the SPA,         e.g. myapp.app.cloud.gov
+#
+# Services to create BEFORE `cf push`:
+#   cf create-service aws-rds small-psql <backend-app>-db
+#   cf create-service aws-rds small-psql <auth-app>-db
+#
+# Frontend build must happen locally before push (staticfile buildpack serves ./frontend/dist):
+#   cd frontend && VITE_API_URL=https://<api-host> npm ci && npm run build
+#
+# Variables to supply via `cf push --vars-file` or `-var`:
+#   secret_key              Django SECRET_KEY
+#   keycloak_admin_user     Bootstrap admin username (>= 5 chars)
+#   keycloak_admin_password Bootstrap admin password (>= 10 chars)
+#   auth_host               <auth-host>
+#   api_host                <api-host>
+#   spa_host                <spa-host>
+
+applications:
+  # ---- Keycloak auth server (public) ----
+  - name: <auth-app>
+    memory: 1024M
+    disk_quota: 2048M
+    instances: 1
+    docker:
+      image: ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:latest
+    routes:
+      - route: ((auth_host))
+    services:
+      - <auth-app>-db
+    health-check-type: process
+    env:
+      KC_HOSTNAME: ((auth_host))
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ((keycloak_admin_user))
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ((keycloak_admin_password))
+      # cloud.gov container egress is IPv6-first; force JVM to match so the
+      # OIDC broker token call to login.fr.cloud.gov does not hang on IPv4.
+      JAVA_OPTS_APPEND: "-Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false"
+    command: |
+      set -euo pipefail
+      RAW_URI=$(echo "$VCAP_SERVICES" | grep -o '"uri":\s*"[^"]*' | sed 's/"uri":\s*//' | cut -d '"' -f2 | tail -1)
+      URI_NO_SCHEME="${RAW_URI#*://}"
+      USERPASS="${URI_NO_SCHEME%@*}"
+      HOSTDB="${URI_NO_SCHEME#*@}"
+      export KC_DB_USERNAME="${USERPASS%%:*}"
+      export KC_DB_PASSWORD="${USERPASS#*:}"
+      HOSTPORT="${HOSTDB%%/*}"
+      export KC_DB_DATABASE="${HOSTDB#*/}"
+      if echo "$HOSTPORT" | grep -q ':'; then
+        export KC_DB_HOST="${HOSTPORT%%:*}"
+        export KC_DB_PORT="${HOSTPORT##*:}"
+      else
+        export KC_DB_HOST="$HOSTPORT"
+        export KC_DB_PORT="5432"
+      fi
+      export KC_DB="postgres"
+      export KC_DB_URL="jdbc:postgresql://${KC_DB_HOST}:${KC_DB_PORT}/${KC_DB_DATABASE}"
+      export KC_HTTP_PORT="${PORT}"
+      export KC_TRUSTSTORE_PATHS="/etc/ssl/certs/ca-bundle.crt,/etc/cf-system-certificates"
+      exec /opt/keycloak/bin/kc.sh start \
+        --spi-events-listener--jboss-logging--success-level=info \
+        --spi-events-listener--jboss-logging--error-level=warn
+
+  # ---- Django backend (public API/OIDC on <api-host>) ----
+  - name: <backend-app>
+    memory: 512M
+    disk_quota: 1G
+    instances: 1
+    path: backend
+    buildpacks:
+      - python_buildpack
+    routes:
+      - route: ((api_host))
+    services:
+      - <backend-app>-db
+    health-check-type: http
+    health-check-http-endpoint: /api/health/
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.cloud_gov
+      SECRET_KEY: ((secret_key))
+      ALLOWED_HOSTS: ((api_host))
+      CORS_ALLOWED_ORIGINS: https://((spa_host))
+      CSRF_TRUSTED_ORIGINS: https://((spa_host)),https://((api_host))
+      FRONTEND_URL: https://((spa_host))
+      LOG_LEVEL: INFO
+      # Keycloak OIDC — realm to be created after first Keycloak boot
+      OIDC_OP_ISSUER: https://((auth_host))/realms/precogly
+      OIDC_OP_JWKS_ENDPOINT: https://((auth_host))/realms/precogly/protocol/openid-connect/certs
+      OIDC_OP_AUTHORIZATION_ENDPOINT: https://((auth_host))/realms/precogly/protocol/openid-connect/auth
+      OIDC_OP_TOKEN_ENDPOINT: https://((auth_host))/realms/precogly/protocol/openid-connect/token
+      OIDC_OP_USER_ENDPOINT: https://((auth_host))/realms/precogly/protocol/openid-connect/userinfo
+    command: |
+      python manage.py migrate --noinput && \
+      gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 4 --threads 2 --timeout 60 --access-logfile - --error-logfile -
+
+  # ---- Frontend SPA (public root at <spa-host>) ----
+  #
+  # Build locally before pushing:
+  #   cd frontend && VITE_API_URL=https://<api-host> \
+  #     npm ci && npm run build
+  #
+  - name: <frontend-app>
+    memory: 128M
+    disk_quota: 512M
+    instances: 1
+    path: frontend/dist
+    buildpacks:
+      - staticfile_buildpack
+    routes:
+      - route: ((spa_host))
+    health-check-type: http
+    health-check-http-endpoint: /

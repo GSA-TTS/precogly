@@ -7,6 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Loader2, Eye, EyeOff } from 'lucide-react'
 
+// SSO base URL for Django's mozilla_django_oidc endpoints (kept separate from /api).
+const SSO_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+const SSO_ENABLED = import.meta.env.VITE_SSO_ENABLED !== 'false'
+
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,6 +59,30 @@ export function Login() {
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>
+          {SSO_ENABLED && SSO_BASE && (
+            <div className="mb-4 space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  // Backend LOGIN_REDIRECT_URL routes to /sso/handoff/,
+                  // which mints JWTs and redirects to /sso-callback here.
+                  window.location.href = `${SSO_BASE}/oidc/authenticate/`
+                }}
+              >
+                Sign in with cloud.gov (Keycloak SSO)
+              </Button>
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ThreatModel, DashboardStats, System, CreateThreatModelInput, CreateSystemInput } from '@/types'
-import { api, getAccessToken } from '@/lib/api'
+import { api, getAccessToken, API_BASE } from '@/lib/api'
 
 // Query Hooks
 export function useDashboardStats() {
@@ -332,7 +332,7 @@ export function useImportTmLibrary() {
 
 export async function exportTmLibrary(threatModelId: string): Promise<void> {
   const token = getAccessToken()
-  const response = await fetch(`/api/threat-models/${threatModelId}/export/tm-library/`, {
+  const response = await fetch(`${API_BASE}/threat-models/${threatModelId}/export/tm-library/`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 
@@ -377,7 +377,7 @@ export function useImportCycloneDx() {
 
 export async function exportCycloneDx(threatModelId: string): Promise<void> {
   const token = getAccessToken()
-  const response = await fetch(`/api/threat-models/${threatModelId}/export/cyclonedx/`, {
+  const response = await fetch(`${API_BASE}/threat-models/${threatModelId}/export/cyclonedx/`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 
