@@ -5,7 +5,7 @@ URL routing for compliance app.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .matrix import ComplianceMatrixApiView
+from .matrix import ComplianceMatrixApiView, compliance_matrix_html
 from .views import (
     CountermeasureLibraryStandardViewSet,
     StandardFrameworkViewSet,
@@ -27,5 +27,10 @@ urlpatterns = [
         "threat-models/<int:tm_id>/compliance-matrix/",
         ComplianceMatrixApiView.as_view(),
         name="compliance-matrix",
+    ),
+    path(
+        "threat-models/<int:tm_id>/compliance-matrix.html",
+        compliance_matrix_html,
+        name="compliance-matrix-html",
     ),
 ]
