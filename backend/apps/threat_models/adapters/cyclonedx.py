@@ -267,6 +267,36 @@ class CycloneDxAdapter(BaseAdapter):
                 metadata["authors"] = [author]
         return metadata
 
+    def _requirement_snapshot_from_requirement(self, requirement):
+        """Return the CDX requirement fields shared by real and snapshot mappings."""
+        return {
+            "identifier": requirement.section_code,
+            "title": requirement.name or requirement.section_code,
+            "description": requirement.description,
+            "source": {"name": requirement.framework.name},
+        }
+
+    def _requirement_snapshot_from_mapping(self, mapping):
+        """Return CDX requirement fields from an unresolved instance mapping."""
+        return {
+            "identifier": mapping.section_code,
+            "title": mapping.section_code,
+            "description": mapping.requirement_description or "",
+            "source": {"name": mapping.framework_name},
+        }
+
+    def _requirement_snapshot_from_definition(self, requirement_data):
+        """Normalize a CDX requirement definition for deferred control resolution."""
+        return {
+            "section_code": requirement_data.get("identifier", ""),
+            "framework_name": (requirement_data.get("source") or {}).get("name", ""),
+            "description": requirement_data.get("description", ""),
+        }
+
+    def _build_requirement_definition(self, bom_ref, snapshot):
+        """Build a CDX requirement entry from normalized snapshot fields."""
+        return {"bom-ref": bom_ref, **snapshot}
+
     def _build_definitions(self, threat_model, resolver, prefetch):
         definitions = {}
 
@@ -318,28 +348,17 @@ class CycloneDxAdapter(BaseAdapter):
             cdx_requirements = []
             for req in requirements_by_id.values():
                 cdx_requirements.append(
-                    {
-                        "bom-ref": resolver.register("requirement", req),
-                        "identifier": req.section_code,
-                        "title": req.name or req.section_code,
-                        "description": req.description,
-                        "source": {
-                            "name": req.framework.name,
-                        },
-                    }
+                    self._build_requirement_definition(
+                        resolver.register("requirement", req),
+                        self._requirement_snapshot_from_requirement(req),
+                    )
                 )
-            for (
-                framework_name,
-                section_code,
-            ), mapping in snapshot_requirements.items():
+            for mapping in snapshot_requirements.values():
                 cdx_requirements.append(
-                    {
-                        "bom-ref": resolver.register("requirement", mapping),
-                        "identifier": section_code,
-                        "title": section_code,
-                        "description": mapping.requirement_description or "",
-                        "source": {"name": framework_name},
-                    }
+                    self._build_requirement_definition(
+                        resolver.register("requirement", mapping),
+                        self._requirement_snapshot_from_mapping(mapping),
+                    )
                 )
             definitions["requirements"] = cdx_requirements
 
@@ -1473,17 +1492,10 @@ class CycloneDxAdapter(BaseAdapter):
         bom_ref = req_data.get("bom-ref", "")
         if not bom_ref:
             return
-        section_code = req_data.get("identifier", "")
-        framework_name = (req_data.get("source") or {}).get("name", "")
-        description = req_data.get("description", "")
         resolver.register(
             "requirement",
             bom_ref,
-            {
-                "section_code": section_code,
-                "framework_name": framework_name,
-                "description": description,
-            },
+            self._requirement_snapshot_from_definition(req_data),
         )
 
     def _resolve_control_satisfies(self, cm, resolver, warnings):
@@ -1655,10 +1667,8 @@ class CycloneDxAdapter(BaseAdapter):
         )
         resolver.register("control", bom_ref, cm)
 
-        # Deferred: appliesTo resolved elsewhere; satisfies resolved by
-        # _resolve_control_satisfies after all requirements are imported.
-        if control_data.get("appliesTo"):
-            cm._deferred_applies_to = control_data["appliesTo"]
+        # Deferred: satisfies resolved by _resolve_control_satisfies after all
+        # requirements are imported. appliesTo import is not currently implemented.
         if control_data.get("satisfies"):
             cm._deferred_satisfies = control_data["satisfies"]
 
