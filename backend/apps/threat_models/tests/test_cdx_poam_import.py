@@ -11,7 +11,12 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from apps.organizations.models import Organization, OrganizationMember, Team, TeamMembership
+from apps.organizations.models import (
+    Organization,
+    OrganizationMember,
+    Team,
+    TeamMembership,
+)
 from apps.threats.models import InstanceCountermeasure
 
 from ..adapters import CycloneDxAdapter
@@ -34,7 +39,9 @@ class CdxPoamImportTestCase(TestCase):
         cls.user = User.objects.create_user(
             username="cdxpoam", email="cdxpoam@test.org", password="pw"
         )
-        cls.org = Organization.objects.create(name="CDX Poam Org", domain="cdxpoam.test")
+        cls.org = Organization.objects.create(
+            name="CDX Poam Org", domain="cdxpoam.test"
+        )
         OrganizationMember.objects.create(
             organization=cls.org, user=cls.user, role="security_team"
         )

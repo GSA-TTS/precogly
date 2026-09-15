@@ -757,10 +757,12 @@ class InstanceCountermeasureViewSet(viewsets.ModelViewSet):
 
             qs = qs.filter(
                 scheduled_completion__lt=date.today(),
-            ).exclude(status__in=[
-                InstanceCountermeasure.Status.IMPLEMENTED,
-                InstanceCountermeasure.Status.VERIFIED,
-            ])
+            ).exclude(
+                status__in=[
+                    InstanceCountermeasure.Status.IMPLEMENTED,
+                    InstanceCountermeasure.Status.VERIFIED,
+                ]
+            )
         return qs
 
     filter_backends = [DjangoFilterBackend]
