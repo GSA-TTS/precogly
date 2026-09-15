@@ -297,8 +297,11 @@ class CycloneDxAdapter(BaseAdapter):
 
         # Requirements: collect all unique requirements from countermeasure
         # compliance mappings (library + instance) and register them so
-        # _build_controls can reference them in satisfies.
+        # _build_controls can reference them in satisfies. Instance mappings
+        # whose FK is unresolved still carry section_code/framework_name
+        # snapshots, so emit those too (GSA-TTS/TTSE-petrified-forest-sspp#31).
         requirements_by_id = {}
+        snapshot_requirements = {}
         for cm in prefetch["countermeasures"]:
             if cm.countermeasure_library:
                 for mapping in cm.countermeasure_library.standard_mappings.all():
@@ -307,8 +310,11 @@ class CycloneDxAdapter(BaseAdapter):
             for mapping in cm.instance_standard_mappings.all():
                 if mapping.requirement and mapping.requirement.framework:
                     requirements_by_id[mapping.requirement_id] = mapping.requirement
+                elif mapping.section_code and mapping.framework_name:
+                    key = (mapping.framework_name, mapping.section_code)
+                    snapshot_requirements[key] = mapping
 
-        if requirements_by_id:
+        if requirements_by_id or snapshot_requirements:
             cdx_requirements = []
             for req in requirements_by_id.values():
                 cdx_requirements.append(
@@ -320,6 +326,16 @@ class CycloneDxAdapter(BaseAdapter):
                         "source": {
                             "name": req.framework.name,
                         },
+                    }
+                )
+            for (framework_name, section_code), mapping in snapshot_requirements.items():
+                cdx_requirements.append(
+                    {
+                        "bom-ref": resolver.register("requirement", mapping),
+                        "identifier": section_code,
+                        "title": section_code,
+                        "description": mapping.requirement_description or "",
+                        "source": {"name": framework_name},
                     }
                 )
             definitions["requirements"] = cdx_requirements
@@ -982,6 +998,10 @@ class CycloneDxAdapter(BaseAdapter):
                     req_ref = resolver.get_ref("requirement", mapping.requirement)
                     if req_ref:
                         satisfies_by_req[mapping.requirement_id] = req_ref
+                elif mapping.section_code and mapping.framework_name:
+                    req_ref = resolver.get_ref("requirement", mapping)
+                    if req_ref:
+                        satisfies_by_req[mapping.id] = req_ref
             if satisfies_by_req:
                 control["satisfies"] = list(satisfies_by_req.values())
 
@@ -1089,13 +1109,22 @@ class CycloneDxAdapter(BaseAdapter):
             self._import_use_case(uc_data, threat_model, resolver)
             summary["use_cases"] += 1
 
+        # 9.5 Requirements from definitions (so control satisfies[] can resolve)
+        for req_data in definitions.get("requirements", []):
+            self._import_requirement(req_data, resolver)
+
         # 10. Controls -> InstanceCountermeasure
+        control_objs = []
         for control_data in json_data.get("controls", []):
             control_name = control_data.get(
                 "name", control_data.get("bom-ref", "unknown")
             )
             try:
-                self._import_control(control_data, threat_model, resolver, warnings)
+                cm = self._import_control(
+                    control_data, threat_model, resolver, warnings
+                )
+                if cm is not None:
+                    control_objs.append(cm)
             except TmBomImportError:
                 raise
             except Exception as e:
@@ -1103,6 +1132,10 @@ class CycloneDxAdapter(BaseAdapter):
                     f"Failed to import control '{control_name}': {e}"
                 ) from e
             summary["controls"] += 1
+
+        # 10.5 Resolve control satisfies[] -> InstanceCountermeasureStandard
+        for cm in control_objs:
+            self._resolve_control_satisfies(cm, resolver, warnings)
 
         # 11. Threats -> ThreatLibrary
         threats_block = json_data.get("threats", {})
@@ -1381,6 +1414,11 @@ class CycloneDxAdapter(BaseAdapter):
 
         protocols = flow_data.get("protocols", [])
 
+        crosses_trust_zone = (
+            getattr(source, "trust_zone_id", None)
+            != getattr(dest, "trust_zone_id", None)
+        )
+
         flow = DataFlow.objects.create(
             source_component=source,
             dest_component=dest,
@@ -1389,6 +1427,7 @@ class CycloneDxAdapter(BaseAdapter):
             protocol=protocols[0] if protocols else "",
             encrypted=flow_data.get("encrypted", False),
             authenticated=flow_data.get("authenticated", False),
+            crosses_trust_zone=crosses_trust_zone,
             format_metadata={"cyclonedx": {"bom_ref": bom_ref}},
         )
         resolver.register("flow", bom_ref, flow)
@@ -1421,6 +1460,73 @@ class CycloneDxAdapter(BaseAdapter):
         )
         resolver.register("usecase", bom_ref, use_case)
         return use_case
+
+    def _import_requirement(self, req_data, resolver):
+        """Register a CDX requirement bom-ref -> (framework_name, section_code).
+
+        The referenced StandardRequirement may not be installed locally, so we
+        register the raw identifiers here and resolve the FK lazily in
+        _resolve_control_satisfies (GSA-TTS/TTSE-petrified-forest-sspp#31 item 1).
+        """
+        bom_ref = req_data.get("bom-ref", "")
+        if not bom_ref:
+            return
+        section_code = req_data.get("identifier", "")
+        framework_name = (req_data.get("source") or {}).get("name", "")
+        description = req_data.get("description", "")
+        resolver.register(
+            "requirement",
+            bom_ref,
+            {
+                "section_code": section_code,
+                "framework_name": framework_name,
+                "description": description,
+            },
+        )
+
+    def _resolve_control_satisfies(self, cm, resolver, warnings):
+        """Create InstanceCountermeasureStandard rows from a control's satisfies[].
+
+        Resolves the StandardRequirement FK when its framework is installed;
+        otherwise stores section_code/framework_name snapshots so the mapping
+        still displays (GSA-TTS/TTSE-petrified-forest-sspp#31 item 1).
+        """
+        from apps.compliance.models import StandardRequirement
+        from apps.threats.models import InstanceCountermeasureStandard
+
+        satisfies = getattr(cm, "_deferred_satisfies", None)
+        if not satisfies:
+            return
+
+        for req_ref in satisfies:
+            req_info = resolver.resolve("requirement", req_ref)
+            if not isinstance(req_info, dict):
+                msg = (
+                    f"Control '{cm.countermeasure_name}': satisfies reference "
+                    f"'{req_ref}' does not match any requirement definition; skipped."
+                )
+                logger.warning(msg)
+                warnings.append(msg)
+                continue
+
+            section_code = req_info.get("section_code", "")
+            framework_name = req_info.get("framework_name", "")
+            requirement = None
+            if section_code and framework_name:
+                requirement = StandardRequirement.objects.filter(
+                    framework__name=framework_name,
+                    section_code=section_code,
+                ).first()
+
+            InstanceCountermeasureStandard.objects.get_or_create(
+                countermeasure=cm,
+                requirement=requirement,
+                defaults={
+                    "section_code": section_code,
+                    "framework_name": framework_name,
+                    "requirement_description": req_info.get("description", ""),
+                },
+            )
 
     def _import_control(self, control_data, threat_model, resolver, warnings):
         from apps.threats.models import InstanceCountermeasure
@@ -1502,6 +1608,16 @@ class CycloneDxAdapter(BaseAdapter):
         if poam_props:
             cdx_meta["poam"] = poam_props
 
+        # externalReferences: an entry typed "evidence" populates evidence_url
+        # (GSA-TTS/TTSE-petrified-forest-sspp#31 item 3).
+        evidence_url = ""
+        for ref in control_data.get("externalReferences", []):
+            if isinstance(ref, dict) and ref.get("type") == "evidence" and ref.get(
+                "url"
+            ):
+                evidence_url = ref["url"]
+                break
+
         cm = InstanceCountermeasure.objects.create(
             threat_model=threat_model,
             countermeasure_name=name,
@@ -1512,6 +1628,7 @@ class CycloneDxAdapter(BaseAdapter):
             effectiveness=effectiveness,
             is_inherited=is_inherited,
             inherited_from_component_name=provider_system or "",
+            evidence_url=evidence_url,
             source=(
                 InstanceCountermeasure.Source.VAULT_IMPORT
                 if is_inherited or poam_props
@@ -1523,7 +1640,8 @@ class CycloneDxAdapter(BaseAdapter):
         )
         resolver.register("control", bom_ref, cm)
 
-        # Deferred: appliesTo and satisfies resolved after all objects created
+        # Deferred: appliesTo resolved elsewhere; satisfies resolved by
+        # _resolve_control_satisfies after all requirements are imported.
         if control_data.get("appliesTo"):
             cm._deferred_applies_to = control_data["appliesTo"]
         if control_data.get("satisfies"):
