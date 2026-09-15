@@ -185,7 +185,7 @@ def _cm_payload(ic: InstanceCountermeasure, section_code: str) -> dict:
         or ic.inherited_from_component_name
         or "",
         "responsibility_source": cdx.get("responsibility_source", ""),
-        "control_type": cdx.get("control_type") or ic.control_type or "",
+        "control_type": cdx.get("control_type") or ic.control_nature or "",
     }
     poam_payload = {
         "poam_id": poam.get("poam_id", ""),

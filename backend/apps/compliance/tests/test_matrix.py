@@ -90,7 +90,7 @@ class ComplianceMatrixTests(APITestCase):
             threat_model=cls.tm,
             countermeasure_name="MFA everywhere",
             status="implemented",
-            control_type="preventive",
+            control_nature="preventive",
             is_inherited=False,
             format_metadata={
                 "cyclonedx": {
@@ -138,10 +138,10 @@ class ComplianceMatrixTests(APITestCase):
         assert "CM" not in families
 
         ac3 = families["AC"]["requirements"][0]
-        assert ac3["section_code"] == "AC-3"
+        assert ac3["sectionCode"] == "AC-3"
         assert [cm["name"] for cm in ac3["countermeasures"]] == ["MFA everywhere"]
         assert ac3["countermeasures"][0]["mappings"] == [
-            {"sufficiency": "partial", "section_code": "AC-3", "evidence_url": ""}
+            {"sufficiency": "partial", "sectionCode": "AC-3", "evidenceUrl": ""}
         ]
 
     def test_matrix_requires_authentication(self):
@@ -186,12 +186,12 @@ class ComplianceMatrixTests(APITestCase):
         ac3 = data["families"][0]["requirements"][0]
         cm = ac3["countermeasures"][0]
         assert cm["inheritance"] == {
-            "is_inherited": True,
-            "providing_system": "Platform IAM",
-            "responsibility_source": "crm",
-            "control_type": "preventive",
+            "isInherited": True,
+            "providingSystem": "Platform IAM",
+            "responsibilitySource": "crm",
+            "controlType": "preventive",
         }
-        assert cm["poam"] == {"poam_id": "POAM-123", "due_date": "2026-12-31"}
+        assert cm["poam"] == {"poamId": "POAM-123", "dueDate": "2026-12-31"}
 
     def test_include_empty_shows_seeded_but_unlinked_requirements(self):
         self.client.force_authenticate(self.user)
@@ -206,7 +206,7 @@ class ComplianceMatrixTests(APITestCase):
         expanded_families = {fam["family"]: fam for fam in expanded["families"]}
         assert "CM" in expanded_families
         cm2 = expanded_families["CM"]["requirements"][0]
-        assert cm2["section_code"] == "CM-2"
+        assert cm2["sectionCode"] == "CM-2"
         assert cm2["countermeasures"] == []
         assert cm2["threats"] == []
 
