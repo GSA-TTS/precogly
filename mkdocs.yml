@@ -68,6 +68,8 @@ nav:
   - Recipes:
       - IEC 62443: recipes/iec-62443.md
       - EU Banking: recipes/eu-banking.md
+  - Planning:
+      - SSPP Roadmap & Maintainability Assessment: planning/precogly-roadmap.md
   - API:
       - Overview: api/overview.md
   - Contributing:
