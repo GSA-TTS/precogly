@@ -1465,6 +1465,43 @@ class CycloneDxAdapter(BaseAdapter):
         if cdx_status in ("proposed", "approved"):
             cdx_meta["original_status"] = cdx_status
 
+        # Extract vault:* properties for inheritance metadata
+        props = {
+            p["name"]: p["value"]
+            for p in control_data.get("properties", [])
+            if isinstance(p, dict) and "name" in p and "value" in p
+        }
+        nist_id = props.get("nist:control-id") or props.get("crm:control-id", "")
+        origination = props.get("vault:origination", "")
+        provider_system = props.get("vault:providing-system", "")
+        if nist_id:
+            cdx_meta["nist_control_id"] = nist_id
+        is_inherited = origination in ("inherited", "shared")
+
+        # poam:* properties annotate an existing control as a POA&M item
+        # rather than creating a separate entity (GSA-TTS/TTSE-petrified-forest-sspp#81).
+        poam_props = {
+            k[len("poam:") :]: v for k, v in props.items() if k.startswith("poam:")
+        }
+        poam_id = poam_props.get("id", "")
+        scheduled_completion = None
+        if poam_props.get("scheduled-completion"):
+            from datetime import date
+
+            try:
+                scheduled_completion = date.fromisoformat(
+                    poam_props["scheduled-completion"]
+                )
+            except ValueError:
+                msg = (
+                    f"Control '{name}': invalid poam:scheduled-completion date "
+                    f"'{poam_props['scheduled-completion']}', ignored."
+                )
+                logger.warning(msg)
+                warnings.append(msg)
+        if poam_props:
+            cdx_meta["poam"] = poam_props
+
         cm = InstanceCountermeasure.objects.create(
             threat_model=threat_model,
             countermeasure_name=name,
@@ -1473,6 +1510,15 @@ class CycloneDxAdapter(BaseAdapter):
             control_nature=control_nature,
             status=status,
             effectiveness=effectiveness,
+            is_inherited=is_inherited,
+            inherited_from_component_name=provider_system or "",
+            source=(
+                InstanceCountermeasure.Source.VAULT_IMPORT
+                if is_inherited or poam_props
+                else InstanceCountermeasure.Source.MANUAL
+            ),
+            poam_id=poam_id,
+            scheduled_completion=scheduled_completion,
             format_metadata={"cyclonedx": cdx_meta},
         )
         resolver.register("control", bom_ref, cm)
