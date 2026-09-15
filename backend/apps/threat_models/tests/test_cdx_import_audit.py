@@ -127,6 +127,41 @@ class CdxImportAuditTestCase(TestCase):
         self.assertEqual(mapping.framework_name, "NIST 800-53 Rev 5 UNINSTALLED")
         self.assertEqual(mapping.requirement_description, "Monitor the system.")
 
+    def test_multiple_unresolved_satisfies_create_distinct_snapshots(self):
+        json_data = _blueprint(
+            definitions={
+                "requirements": [
+                    {
+                        "bom-ref": "req-si4",
+                        "identifier": "SI-4",
+                        "description": "System monitoring.",
+                        "source": {"name": "NIST 800-53 Rev 5 UNINSTALLED"},
+                    },
+                    {
+                        "bom-ref": "req-cp9",
+                        "identifier": "CP-9",
+                        "description": "System backup.",
+                        "source": {"name": "NIST 800-53 Rev 5 UNINSTALLED"},
+                    },
+                ]
+            },
+            controls=[
+                {
+                    "bom-ref": "control-two-reqs",
+                    "name": "Monitoring and Backup",
+                    "status": "implemented",
+                    "satisfies": ["req-si4", "req-cp9"],
+                }
+            ],
+        )
+        tm, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        cm = InstanceCountermeasure.objects.get(threat_model=tm)
+        self.assertCountEqual(
+            cm.instance_standard_mappings.values_list("section_code", flat=True),
+            ["SI-4", "CP-9"],
+        )
+
     def test_satisfies_dangling_reference_warns_and_skips(self):
         json_data = _blueprint(
             controls=[
@@ -197,7 +232,11 @@ class CdxImportAuditTestCase(TestCase):
                 ],
                 "assets": [
                     {"bom-ref": "asset-gw", "name": "Gateway", "zone": "zone-dmz"},
-                    {"bom-ref": "asset-db", "name": "Database", "zone": "zone-internal"},
+                    {
+                        "bom-ref": "asset-db",
+                        "name": "Database",
+                        "zone": "zone-internal",
+                    },
                 ],
                 "flows": [
                     {
@@ -280,4 +319,3 @@ class CdxImportAuditTestCase(TestCase):
         self.assertIsNone(mapping.requirement)
         self.assertEqual(mapping.section_code, "SI-4")
         self.assertEqual(mapping.framework_name, "NIST 800-53 Rev 5 UNINSTALLED")
-

@@ -328,7 +328,10 @@ class CycloneDxAdapter(BaseAdapter):
                         },
                     }
                 )
-            for (framework_name, section_code), mapping in snapshot_requirements.items():
+            for (
+                framework_name,
+                section_code,
+            ), mapping in snapshot_requirements.items():
                 cdx_requirements.append(
                     {
                         "bom-ref": resolver.register("requirement", mapping),
@@ -1414,9 +1417,8 @@ class CycloneDxAdapter(BaseAdapter):
 
         protocols = flow_data.get("protocols", [])
 
-        crosses_trust_zone = (
-            getattr(source, "trust_zone_id", None)
-            != getattr(dest, "trust_zone_id", None)
+        crosses_trust_zone = getattr(source, "trust_zone_id", None) != getattr(
+            dest, "trust_zone_id", None
         )
 
         flow = DataFlow.objects.create(
@@ -1518,15 +1520,26 @@ class CycloneDxAdapter(BaseAdapter):
                     section_code=section_code,
                 ).first()
 
-            InstanceCountermeasureStandard.objects.get_or_create(
-                countermeasure=cm,
-                requirement=requirement,
-                defaults={
-                    "section_code": section_code,
-                    "framework_name": framework_name,
-                    "requirement_description": req_info.get("description", ""),
-                },
-            )
+            if requirement:
+                InstanceCountermeasureStandard.objects.get_or_create(
+                    countermeasure=cm,
+                    requirement=requirement,
+                    defaults={
+                        "section_code": section_code,
+                        "framework_name": framework_name,
+                        "requirement_description": req_info.get("description", ""),
+                    },
+                )
+            else:
+                InstanceCountermeasureStandard.objects.get_or_create(
+                    countermeasure=cm,
+                    requirement=None,
+                    section_code=section_code,
+                    framework_name=framework_name,
+                    defaults={
+                        "requirement_description": req_info.get("description", ""),
+                    },
+                )
 
     def _import_control(self, control_data, threat_model, resolver, warnings):
         from apps.threats.models import InstanceCountermeasure
@@ -1612,8 +1625,10 @@ class CycloneDxAdapter(BaseAdapter):
         # (GSA-TTS/TTSE-petrified-forest-sspp#31 item 3).
         evidence_url = ""
         for ref in control_data.get("externalReferences", []):
-            if isinstance(ref, dict) and ref.get("type") == "evidence" and ref.get(
-                "url"
+            if (
+                isinstance(ref, dict)
+                and ref.get("type") == "evidence"
+                and ref.get("url")
             ):
                 evidence_url = ref["url"]
                 break
