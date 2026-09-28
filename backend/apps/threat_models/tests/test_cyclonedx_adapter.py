@@ -7,20 +7,29 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.compliance.models import StandardFramework, StandardRequirement
-from apps.organizations.models import Organization, OrganizationMember, Team, TeamMembership
-from apps.systems.models import DataAsset, DataFlow, OrgsystemComponent, TrustBoundary, TrustZone
+from apps.diagrams.models import DFD
+from apps.organizations.models import (
+    Organization,
+    OrganizationMember,
+    Team,
+    TeamMembership,
+)
+from apps.systems.models import (
+    DataAsset,
+    DataFlow,
+    OrgsystemComponent,
+    TrustBoundary,
+    TrustZone,
+)
+from apps.threat_models.models import UseCase
 from apps.threats.models import (
     ComponentInstanceThreat,
-    DataFlowInstanceThreat,
     InstanceCountermeasure,
     InstanceCountermeasureStandard,
     Risk,
-    RiskResponse,
     RiskThreat,
     ThreatLibrary,
 )
-from apps.diagrams.models import DFD
-from apps.threat_models.models import ThreatModel, UseCase
 
 from ..adapters import CycloneDxAdapter
 
@@ -142,9 +151,7 @@ class TestCycloneDxImportMinimal(CycloneDxTestMixin, TestCase):
 
     def test_components_created(self):
         self.assertEqual(self.summary["components"], 3)
-        components = OrgsystemComponent.objects.filter(
-            threat_model=self.threat_model
-        )
+        components = OrgsystemComponent.objects.filter(threat_model=self.threat_model)
         self.assertEqual(components.count(), 3)
 
     def test_asset_type_mapping(self):
@@ -186,9 +193,7 @@ class TestCycloneDxImportMinimal(CycloneDxTestMixin, TestCase):
 
     def test_controls_created(self):
         self.assertEqual(self.summary["controls"], 1)
-        control = InstanceCountermeasure.objects.get(
-            threat_model=self.threat_model
-        )
+        control = InstanceCountermeasure.objects.get(threat_model=self.threat_model)
         self.assertEqual(control.countermeasure_name, "Input Validation")
         self.assertEqual(control.status, "implemented")
         self.assertAlmostEqual(control.effectiveness, 0.85)
@@ -238,9 +243,7 @@ class TestCycloneDxImportFull(CycloneDxTestMixin, TestCase):
             threat_model=self.threat_model, name="PLC Controller"
         )
         self.assertEqual(plc.category, "process")
-        self.assertEqual(
-            plc.format_metadata["cyclonedx"]["asset_type"], "device"
-        )
+        self.assertEqual(plc.format_metadata["cyclonedx"]["asset_type"], "device")
 
     def test_gateway_asset_maps_to_process(self):
         gateway = OrgsystemComponent.objects.get(
@@ -309,9 +312,7 @@ class TestCycloneDxImportFull(CycloneDxTestMixin, TestCase):
         self.assertIn("behaviors", cdx_meta)
 
     def test_control_status_mapping(self):
-        controls = InstanceCountermeasure.objects.filter(
-            threat_model=self.threat_model
-        )
+        controls = InstanceCountermeasure.objects.filter(threat_model=self.threat_model)
         statuses = set(controls.values_list("status", flat=True))
         self.assertIn("verified", statuses)
         self.assertIn("implemented", statuses)
@@ -363,9 +364,7 @@ class TestCycloneDxExport(CycloneDxTestMixin, TestCase):
         metadata = self.export["metadata"]
         self.assertIn("timestamp", metadata)
         self.assertIn("tools", metadata)
-        self.assertEqual(
-            metadata["tools"]["components"][0]["name"], "Precogly"
-        )
+        self.assertEqual(metadata["tools"]["components"][0]["name"], "Precogly")
 
     def test_single_blueprint(self):
         self.assertEqual(len(self.export["blueprints"]), 1)
@@ -496,12 +495,8 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
             OrgsystemComponent.objects.filter(threat_model=tm2).count(),
         )
         self.assertEqual(
-            DataFlow.objects.filter(
-                source_component__threat_model=tm1
-            ).count(),
-            DataFlow.objects.filter(
-                source_component__threat_model=tm2
-            ).count(),
+            DataFlow.objects.filter(source_component__threat_model=tm1).count(),
+            DataFlow.objects.filter(source_component__threat_model=tm2).count(),
         )
         self.assertEqual(
             Risk.objects.filter(threat_model=tm1).count(),
@@ -526,7 +521,11 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         # Find boundary with all crossing requirements
         blueprint = exported["blueprints"][0]
         perimeter = next(
-            (b for b in blueprint["boundaries"] if b.get("name") == "Network Perimeter"),
+            (
+                b
+                for b in blueprint["boundaries"]
+                if b.get("name") == "Network Perimeter"
+            ),
             None,
         )
         self.assertIsNotNone(perimeter)
@@ -594,8 +593,7 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         # Verify DFD is in the export
         blueprint = exported["blueprints"][0]
         dfd_vis = next(
-            v for v in blueprint["visualizations"]
-            if v.get("type") == "precogly-dfd"
+            v for v in blueprint["visualizations"] if v.get("type") == "precogly-dfd"
         )
         self.assertEqual(len(dfd_vis["data"]["nodes"]), 3)
 
@@ -645,18 +643,20 @@ class TestCycloneDxComplianceMappings(CycloneDxTestMixin, TestCase):
             "specFormat": "CycloneDX",
             "specVersion": "2.0",
             "blueprints": [{"name": "Test"}],
-            "controls": [{
-                "bom-ref": "ctrl-ac-2",
-                "name": "Account Management",
-                "externalReferences": [
-                    {"type": "documentation", "url": "https://example.test/docs"},
-                    {"type": "evidence", "url": "https://example.test/evidence"},
-                ],
-                "satisfies": [
-                    {"framework": "nist-800-53-r5", "reference": "AC-2"},
-                    {"framework": "nist-800-53-r5", "reference": "AC-2"},
-                ],
-            }],
+            "controls": [
+                {
+                    "bom-ref": "ctrl-ac-2",
+                    "name": "Account Management",
+                    "externalReferences": [
+                        {"type": "documentation", "url": "https://example.test/docs"},
+                        {"type": "evidence", "url": "https://example.test/evidence"},
+                    ],
+                    "satisfies": [
+                        {"framework": "nist-800-53-r5", "reference": "AC-2"},
+                        {"framework": "nist-800-53-r5", "reference": "AC-2"},
+                    ],
+                }
+            ],
         }
 
         threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
@@ -673,38 +673,53 @@ class TestCycloneDxComplianceMappings(CycloneDxTestMixin, TestCase):
             "specFormat": "CycloneDX",
             "specVersion": "2.0",
             "blueprints": [{"name": "Test"}],
-            "controls": [{
-                "bom-ref": "ctrl-unknown",
-                "name": "Unknown Mapping",
-                "satisfies": [
-                    {"framework": "nist-800-53-r5", "reference": "ZZ-999"},
-                ],
-            }],
+            "controls": [
+                {
+                    "bom-ref": "ctrl-unknown",
+                    "name": "Unknown Mapping",
+                    "satisfies": [
+                        {"framework": "nist-800-53-r5", "reference": "ZZ-999"},
+                    ],
+                }
+            ],
         }
 
         threat_model, summary = self.adapter.import_data(json_data, self.org, self.user)
 
         control = InstanceCountermeasure.objects.get(threat_model=threat_model)
-        self.assertFalse(InstanceCountermeasureStandard.objects.filter(countermeasure=control).exists())
-        self.assertTrue(any("unknown compliance requirement" in warning for warning in summary["warnings"]))
+        self.assertFalse(
+            InstanceCountermeasureStandard.objects.filter(
+                countermeasure=control
+            ).exists()
+        )
+        self.assertTrue(
+            any(
+                "unknown compliance requirement" in warning
+                for warning in summary["warnings"]
+            )
+        )
 
     def test_imports_native_satisfies_bom_ref(self):
         json_data = {
             "specFormat": "CycloneDX",
             "specVersion": "2.0",
             "definitions": {
-                "requirements": [{
-                    "bom-ref": "req-ac-2",
-                    "identifier": "AC-2",
-                    "source": {"name": "NIST SP 800-53"},
-                }]
+                "requirements": [
+                    {
+                        "bom-ref": "req-ac-2",
+                        "identifier": "AC-2",
+                        "source": {"name": "NIST SP 800-53"},
+                    }
+                ]
             },
             "blueprints": [{"name": "Test"}],
-            "controls": [{
-                "bom-ref": "ctrl-ac-2",
-                "name": "Account Management",
-                "satisfies": ["req-ac-2"],
-            }],
+            "controls": [
+                {
+                    "bom-ref": "ctrl-ac-2",
+                    "name": "Account Management",
+                    "satisfies": ["req-ac-2"],
+                }
+            ],
         }
 
         threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
@@ -786,7 +801,9 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
 
     def test_invalid_control_status_defaults_to_gap(self):
         """Unknown CDX status values must not persist as invalid choices."""
-        from apps.threat_models.adapters.cyclonedx_enum_maps import CDX_STATUS_TO_CONTROL
+        from apps.threat_models.adapters.cyclonedx_enum_maps import (
+            CDX_STATUS_TO_CONTROL,
+        )
 
         original = dict(CDX_STATUS_TO_CONTROL)
         CDX_STATUS_TO_CONTROL["totally-bogus"] = "totally_bogus"
@@ -841,9 +858,7 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
         }
         tm, summary = self.adapter.import_data(json_data, self.org, self.user)
         self.assertEqual(summary["threats"], 1)
-        instances = ComponentInstanceThreat.objects.filter(
-            component__threat_model=tm
-        )
+        instances = ComponentInstanceThreat.objects.filter(component__threat_model=tm)
         self.assertEqual(instances.count(), 1)
         warnings = summary.get("warnings", [])
         dup_warnings = [w for w in warnings if "Duplicate threat-asset link" in w]
@@ -903,9 +918,7 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
         }
         tm, summary = self.adapter.import_data(json_data, self.org, self.user)
         self.assertEqual(summary["scenarios"], 3)
-        instances = ComponentInstanceThreat.objects.filter(
-            component__threat_model=tm
-        )
+        instances = ComponentInstanceThreat.objects.filter(component__threat_model=tm)
         # All 3 scenarios must collapse to exactly 1 CIT
         self.assertEqual(instances.count(), 1)
         cit = instances.first()
@@ -913,10 +926,7 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
         self.assertEqual(cit.inherent_severity, "high")
         # All 3 bom-refs must be recorded in format_metadata
         cdx_meta = cit.format_metadata.get("cyclonedx", {})
-        recorded_refs = [
-            s["scenario_bom_ref"]
-            for s in cdx_meta.get("scenarios", [])
-        ]
+        recorded_refs = [s["scenario_bom_ref"] for s in cdx_meta.get("scenarios", [])]
         self.assertIn("scenario-ir-8-a", recorded_refs)
         self.assertIn("scenario-ir-8-b", recorded_refs)
         self.assertIn("scenario-ir-8-c", recorded_refs)
