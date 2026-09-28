@@ -6,12 +6,14 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from apps.compliance.models import StandardFramework, StandardRequirement
 from apps.organizations.models import Organization, OrganizationMember, Team, TeamMembership
 from apps.systems.models import DataAsset, DataFlow, OrgsystemComponent, TrustBoundary, TrustZone
 from apps.threats.models import (
     ComponentInstanceThreat,
     DataFlowInstanceThreat,
     InstanceCountermeasure,
+    InstanceCountermeasureStandard,
     Risk,
     RiskResponse,
     RiskThreat,
@@ -614,6 +616,102 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         node1 = next(n for n in dfd2.canvas_data["nodes"] if n["id"] == "n1")
         self.assertEqual(node1["position"]["x"], 100)
         self.assertEqual(node1["position"]["y"], 200)
+
+
+# =====================================================================
+# Compliance Mapping Import Tests
+# =====================================================================
+
+
+class TestCycloneDxComplianceMappings(CycloneDxTestMixin, TestCase):
+    """Controls retain evidence and map existing compliance requirements."""
+
+    def setUp(self):
+        self.framework = StandardFramework.objects.create(
+            slug="nist-800-53-r5",
+            name="NIST SP 800-53",
+            version="Rev. 5",
+            issuer="NIST",
+        )
+        self.requirement = StandardRequirement.objects.create(
+            framework=self.framework,
+            section_code="AC-2",
+            name="Account Management",
+            description="Manage system accounts.",
+        )
+
+    def test_imports_evidence_url_and_compact_satisfies_mapping(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Test"}],
+            "controls": [{
+                "bom-ref": "ctrl-ac-2",
+                "name": "Account Management",
+                "externalReferences": [
+                    {"type": "documentation", "url": "https://example.test/docs"},
+                    {"type": "evidence", "url": "https://example.test/evidence"},
+                ],
+                "satisfies": [
+                    {"framework": "nist-800-53-r5", "reference": "AC-2"},
+                    {"framework": "nist-800-53-r5", "reference": "AC-2"},
+                ],
+            }],
+        }
+
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        control = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertEqual(control.evidence_url, "https://example.test/evidence")
+        mappings = InstanceCountermeasureStandard.objects.filter(countermeasure=control)
+        self.assertEqual(mappings.count(), 1)
+        self.assertEqual(mappings.get().requirement, self.requirement)
+        self.assertEqual(mappings.get().section_code, "AC-2")
+
+    def test_unknown_compact_satisfies_reference_warns_without_mapping(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Test"}],
+            "controls": [{
+                "bom-ref": "ctrl-unknown",
+                "name": "Unknown Mapping",
+                "satisfies": [
+                    {"framework": "nist-800-53-r5", "reference": "ZZ-999"},
+                ],
+            }],
+        }
+
+        threat_model, summary = self.adapter.import_data(json_data, self.org, self.user)
+
+        control = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertFalse(InstanceCountermeasureStandard.objects.filter(countermeasure=control).exists())
+        self.assertTrue(any("unknown compliance requirement" in warning for warning in summary["warnings"]))
+
+    def test_imports_native_satisfies_bom_ref(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "definitions": {
+                "requirements": [{
+                    "bom-ref": "req-ac-2",
+                    "identifier": "AC-2",
+                    "source": {"name": "NIST SP 800-53"},
+                }]
+            },
+            "blueprints": [{"name": "Test"}],
+            "controls": [{
+                "bom-ref": "ctrl-ac-2",
+                "name": "Account Management",
+                "satisfies": ["req-ac-2"],
+            }],
+        }
+
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        control = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        mapping = InstanceCountermeasureStandard.objects.get(countermeasure=control)
+        self.assertEqual(mapping.requirement, self.requirement)
 
 
 # =====================================================================
