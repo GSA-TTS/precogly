@@ -1089,13 +1089,19 @@ class CycloneDxAdapter(BaseAdapter):
             self._import_use_case(uc_data, threat_model, resolver)
             summary["use_cases"] += 1
 
+        # Register definitions against existing, governed compliance records.
+        self._register_existing_requirements(definitions, resolver, warnings)
+
         # 10. Controls -> InstanceCountermeasure
+        imported_controls = []
         for control_data in json_data.get("controls", []):
             control_name = control_data.get(
                 "name", control_data.get("bom-ref", "unknown")
             )
             try:
-                self._import_control(control_data, threat_model, resolver, warnings)
+                imported_controls.append(
+                    self._import_control(control_data, threat_model, resolver, warnings)
+                )
             except TmBomImportError:
                 raise
             except Exception as e:
@@ -1103,6 +1109,9 @@ class CycloneDxAdapter(BaseAdapter):
                     f"Failed to import control '{control_name}': {e}"
                 ) from e
             summary["controls"] += 1
+
+        # Resolve evidence and compliance mappings after every control exists.
+        self._resolve_control_compliance_mappings(imported_controls, resolver, warnings)
 
         # 11. Threats -> ThreatLibrary
         threats_block = json_data.get("threats", {})
@@ -1478,6 +1487,15 @@ class CycloneDxAdapter(BaseAdapter):
             cdx_meta["nist_control_id"] = nist_id
         is_inherited = origination in ("inherited", "shared")
 
+        evidence_url = next(
+            (
+                ref.get("url", "")
+                for ref in control_data.get("externalReferences", [])
+                if ref.get("type") == "evidence" and ref.get("url")
+            ),
+            "",
+        )
+
         cm = InstanceCountermeasure.objects.create(
             threat_model=threat_model,
             countermeasure_name=name,
@@ -1488,6 +1506,7 @@ class CycloneDxAdapter(BaseAdapter):
             effectiveness=effectiveness,
             is_inherited=is_inherited,
             inherited_from_component_name=provider_system or "",
+            evidence_url=evidence_url,
             format_metadata={"cyclonedx": cdx_meta},
         )
         resolver.register("control", bom_ref, cm)
@@ -1499,6 +1518,79 @@ class CycloneDxAdapter(BaseAdapter):
             cm._deferred_satisfies = control_data["satisfies"]
 
         return cm
+
+    def _register_existing_requirements(self, definitions, resolver, warnings):
+        """Resolve CDX requirement definitions without creating compliance data."""
+        from apps.compliance.models import StandardRequirement
+
+        for requirement_data in definitions.get("requirements", []):
+            source = requirement_data.get("source", {})
+            framework_name = source.get("name") if isinstance(source, dict) else ""
+            identifier = requirement_data.get("identifier")
+            bom_ref = requirement_data.get("bom-ref")
+            if not (framework_name and identifier and bom_ref):
+                continue
+
+            requirement = (
+                StandardRequirement.objects.filter(
+                    framework__name=framework_name,
+                    section_code=identifier,
+                )
+                .order_by("id")
+                .first()
+            )
+            if requirement:
+                resolver.register("requirement", bom_ref, requirement)
+            else:
+                warnings.append(
+                    f"Requirement '{identifier}' in framework '{framework_name}' "
+                    "is not installed; compliance mapping was skipped."
+                )
+
+    def _resolve_control_compliance_mappings(self, controls, resolver, warnings):
+        """Map CDX satisfies references to existing compliance requirements.
+
+        Imports must not create frameworks or requirements: their governance and
+        lifecycle belongs to compliance packs. Accept both native TM-BOM bom-ref
+        strings and the compact {reference, framework} shape emitted by SSPP.
+        """
+        from apps.compliance.models import StandardRequirement
+        from apps.threats.models import InstanceCountermeasureStandard
+
+        for control in controls:
+            for satisfies in getattr(control, "_deferred_satisfies", []):
+                requirement = None
+                if isinstance(satisfies, str):
+                    requirement = resolver.resolve("requirement", satisfies)
+                elif isinstance(satisfies, dict):
+                    reference = satisfies.get("reference")
+                    framework = satisfies.get("framework")
+                    if reference and framework:
+                        requirement = (
+                            StandardRequirement.objects.filter(
+                                framework__slug=framework,
+                                section_code=reference,
+                            )
+                            .order_by("id")
+                            .first()
+                        )
+
+                if not requirement:
+                    warnings.append(
+                        f"Control '{control.countermeasure_name}' references an "
+                        "unknown compliance requirement; mapping was skipped."
+                    )
+                    continue
+
+                InstanceCountermeasureStandard.objects.get_or_create(
+                    countermeasure=control,
+                    requirement=requirement,
+                    defaults={
+                        "section_code": requirement.section_code,
+                        "framework_name": requirement.framework.name,
+                        "requirement_description": requirement.description,
+                    },
+                )
 
     def _import_threat(
         self,
