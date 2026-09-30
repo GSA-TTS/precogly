@@ -21,6 +21,7 @@ from apps.systems.models import (
     TrustBoundary,
     TrustZone,
 )
+from apps.threat_models.adapters.cyclonedx import TmBomImportError
 from apps.threat_models.models import UseCase
 from apps.threats.models import (
     ComponentInstanceThreat,
@@ -70,19 +71,19 @@ class TestCycloneDxValidation(CycloneDxTestMixin, TestCase):
     """Test CycloneDX validation logic."""
 
     def test_non_dict_input_raises_error(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(TmBomImportError):
             self.adapter.validate("not a dict")
 
     def test_wrong_spec_format_raises_error(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(TmBomImportError):
             self.adapter.validate({"specFormat": "SPDX", "specVersion": "2.0"})
 
     def test_missing_spec_format_raises_error(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(TmBomImportError):
             self.adapter.validate({"specVersion": "2.0"})
 
     def test_wrong_spec_version_raises_error(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(TmBomImportError):
             self.adapter.validate({"specFormat": "CycloneDX", "specVersion": "1.5"})
 
     def test_valid_minimal_no_blueprints(self):
@@ -535,7 +536,7 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         json_data = load_fixture("cyclonedx_full.json")
 
         # First import
-        tm1, summary1 = self.adapter.import_data(json_data, self.org, self.user)
+        tm1, _ = self.adapter.import_data(json_data, self.org, self.user)
 
         # Export
         exported = self.adapter.export_data(tm1)
@@ -547,7 +548,7 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         )
 
         # Re-import
-        tm2, summary2 = self.adapter.import_data(exported, org2, self.user)
+        tm2, _ = self.adapter.import_data(exported, org2, self.user)
 
         # Compare key counts
         self.assertEqual(

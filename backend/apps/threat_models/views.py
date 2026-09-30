@@ -1240,7 +1240,13 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                 "compliance_standard_coverage": _fraction(
                     lambda cm: cm.instance_standard_mappings.exists()
                 ),
-                "inherited_flag_coverage": _fraction(lambda cm: cm.is_inherited),
+                "inherited_flag_coverage": _fraction(
+                    lambda cm: bool(
+                        (cm.format_metadata or {})
+                        .get("cyclonedx", {})
+                        .get("origination_present")
+                    )
+                ),
                 "component_library_linked": _fraction(
                     lambda cm: cm.countermeasure_library_id is not None
                 ),

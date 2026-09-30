@@ -62,9 +62,14 @@ class ThreatModelFidelityEndpointTests(APITestCase):
             countermeasure_name="Full coverage",
             countermeasure_description="Has prose",
             evidence_url="https://example.gov/evidence",
-            is_inherited=True,
+            is_inherited=False,
             countermeasure_library=library_entry,
-            format_metadata={"cyclonedx": {"nist_control_id": "SC-28"}},
+            format_metadata={
+                "cyclonedx": {
+                    "nist_control_id": "SC-28",
+                    "origination_present": True,
+                }
+            },
         )
         # Bare instance: no NIST id, no evidence, not inherited, no library link.
         InstanceCountermeasure.objects.create(

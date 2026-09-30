@@ -1496,6 +1496,8 @@ class CycloneDxAdapter(BaseAdapter):
         provider_system = props.get("vault:providing-system", "")
         if nist_id:
             cdx_meta["nist_control_id"] = nist_id
+        if "vault:origination" in props:
+            cdx_meta["origination_present"] = True
         is_inherited = origination in ("inherited", "shared")
 
         evidence_url = next(
