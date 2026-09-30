@@ -1390,6 +1390,16 @@ class CycloneDxAdapter(BaseAdapter):
 
         protocols = flow_data.get("protocols", [])
 
+        # A flow crosses a trust zone whenever its endpoints resolve to
+        # different zones, or exactly one endpoint has an assigned zone.
+        # Assets with no assigned zone at all (both None) are not treated
+        # as a crossing, since there is no boundary to cross.
+        source_zone_id = getattr(source, "trust_zone_id", None)
+        dest_zone_id = getattr(dest, "trust_zone_id", None)
+        crosses_trust_zone = source_zone_id != dest_zone_id and (
+            source_zone_id is not None or dest_zone_id is not None
+        )
+
         flow = DataFlow.objects.create(
             source_component=source,
             dest_component=dest,
@@ -1398,6 +1408,7 @@ class CycloneDxAdapter(BaseAdapter):
             protocol=protocols[0] if protocols else "",
             encrypted=flow_data.get("encrypted", False),
             authenticated=flow_data.get("authenticated", False),
+            crosses_trust_zone=crosses_trust_zone,
             format_metadata={"cyclonedx": {"bom_ref": bom_ref}},
         )
         resolver.register("flow", bom_ref, flow)
@@ -1485,6 +1496,8 @@ class CycloneDxAdapter(BaseAdapter):
         provider_system = props.get("vault:providing-system", "")
         if nist_id:
             cdx_meta["nist_control_id"] = nist_id
+        if "vault:origination" in props:
+            cdx_meta["origination_present"] = True
         is_inherited = origination in ("inherited", "shared")
 
         evidence_url = next(
@@ -2066,6 +2079,11 @@ class CycloneDxAdapter(BaseAdapter):
             elif entity_type == "flow" and hasattr(obj, "label"):
                 flow_label_to_flow[obj.label] = obj
 
+        # Map trustZone node id -> zone.id, built after the node-assignment
+        # pass below re-populates each trustZone node's data.trust_zone_id.
+        # Used to auto-anchor unparented actor/component nodes (see below).
+        zone_id_to_trust_zone_node_id = {}
+
         # Assign/remap foreign keys in nodes
         for node in canvas_data.get("nodes", []):
             data = node.get("data", {})
@@ -2076,6 +2094,7 @@ class CycloneDxAdapter(BaseAdapter):
                 zone = zone_name_to_zone.get(label)
                 if zone:
                     data["trust_zone_id"] = zone.id
+                    zone_id_to_trust_zone_node_id[zone.id] = node.get("id")
                 continue
 
             new_component = asset_name_to_component.get(label)
@@ -2088,6 +2107,35 @@ class CycloneDxAdapter(BaseAdapter):
                 )
                 logger.warning(msg)
                 warnings.append(msg)
+
+        # Auto-anchor component nodes to their trust zone's canvas node.
+        # A node whose asset resolved above (data.component_id set) but
+        # that has no explicit parent_id floats unanchored on the canvas
+        # even though its underlying component has a real trust_zone.
+        # If the component's zone has a corresponding trustZone node on
+        # this same canvas, anchor the node there so it renders inside its
+        # zone by default; an explicit parent_id from the source export
+        # always wins and is never overwritten.
+        for node in canvas_data.get("nodes", []):
+            if node.get("parent_id"):
+                continue
+            data = node.get("data", {})
+            component_id = data.get("component_id")
+            if not component_id:
+                continue
+            component = next(
+                (
+                    obj
+                    for obj in asset_name_to_component.values()
+                    if obj.id == component_id
+                ),
+                None,
+            )
+            if component is None or not component.trust_zone_id:
+                continue
+            zone_node_id = zone_id_to_trust_zone_node_id.get(component.trust_zone_id)
+            if zone_node_id:
+                node["parent_id"] = zone_node_id
 
         # Assign/remap foreign keys in edges
         for edge in canvas_data.get("edges", []):
