@@ -1,5 +1,6 @@
 """CycloneDX 2.0 TM-BOM format adapter — import and export."""
 
+import copy
 import logging
 from collections import defaultdict
 from uuid import uuid4
@@ -136,6 +137,53 @@ class CycloneDxAdapter(BaseAdapter):
         return document
 
     # --- Export helpers ---
+
+    @staticmethod
+    def _original_data(obj, key="original"):
+        return copy.deepcopy(
+            (getattr(obj, "format_metadata", {}) or {})
+            .get("cyclonedx", {})
+            .get(key, {})
+        )
+
+    @staticmethod
+    def _merge_properties(original, modeled):
+        """Merge CycloneDX properties by name, with modeled values winning."""
+        merged = []
+        positions = {}
+        for prop in [*(original or []), *(modeled or [])]:
+            if not isinstance(prop, dict) or not prop.get("name"):
+                if prop not in merged:
+                    merged.append(copy.deepcopy(prop))
+                continue
+            name = prop["name"]
+            if name in positions:
+                merged[positions[name]] = copy.deepcopy(prop)
+            else:
+                positions[name] = len(merged)
+                merged.append(copy.deepcopy(prop))
+        return merged
+
+    @classmethod
+    def _merge_original(cls, original, modeled):
+        """Overlay live modeled fields on an imported CycloneDX object."""
+        result = copy.deepcopy(original or {})
+        original_properties = result.pop("properties", [])
+        modeled_properties = modeled.get("properties", [])
+        result.update(modeled)
+        properties = cls._merge_properties(original_properties, modeled_properties)
+        if properties:
+            result["properties"] = properties
+        else:
+            result.pop("properties", None)
+        return result
+
+    @staticmethod
+    def _register_ref(resolver, entity_type, obj, original):
+        bom_ref = original.get("bom-ref") if isinstance(original, dict) else None
+        if bom_ref:
+            return resolver.register(entity_type, bom_ref, obj)
+        return resolver.register(entity_type, obj)
 
     def _prefetch_for_export(self, threat_model):
         """Prefetch all related objects for export efficiency."""
@@ -336,7 +384,7 @@ class CycloneDxAdapter(BaseAdapter):
 
         # Register zones first (assets reference them)
         for zone in trust_zones:
-            resolver.register("zone", zone)
+            self._register_ref(resolver, "zone", zone, self._original_data(zone))
 
         blueprint = {
             "bom-ref": resolver.register("blueprint", threat_model),
@@ -437,7 +485,8 @@ class CycloneDxAdapter(BaseAdapter):
         return blueprint
 
     def _build_asset(self, component, category, resolver):
-        bom_ref = resolver.register("asset", component)
+        original = self._original_data(component)
+        bom_ref = self._register_ref(resolver, "asset", component, original)
         asset = {
             "bom-ref": bom_ref,
             "name": component.name,
@@ -461,7 +510,7 @@ class CycloneDxAdapter(BaseAdapter):
         if cdx_meta.get("authorization"):
             asset["authorization"] = cdx_meta["authorization"]
 
-        return asset
+        return self._merge_original(original, asset)
 
     def _build_data_store(self, component, data_asset_map, resolver):
         store = {
@@ -497,6 +546,7 @@ class CycloneDxAdapter(BaseAdapter):
         return entry
 
     def _build_zone(self, zone, resolver):
+        original = self._original_data(zone)
         zone_data = {
             "bom-ref": resolver.get_ref("zone", zone),
             "name": zone.name,
@@ -510,7 +560,7 @@ class CycloneDxAdapter(BaseAdapter):
             parent_ref = resolver.get_ref("zone", zone.parent)
             if parent_ref:
                 zone_data["parent"] = parent_ref
-        return zone_data
+        return self._merge_original(original, zone_data)
 
     def _build_boundary(self, boundary, resolver):
         boundary_data = {
@@ -557,8 +607,9 @@ class CycloneDxAdapter(BaseAdapter):
         return boundary_data
 
     def _build_flow(self, flow, resolver):
+        original = self._original_data(flow)
         flow_data = {
-            "bom-ref": resolver.register("flow", flow),
+            "bom-ref": self._register_ref(resolver, "flow", flow, original),
             "source": resolver.get_ref("asset", flow.source_component),
             "destination": resolver.get_ref("asset", flow.dest_component),
             "type": "data",
@@ -569,11 +620,9 @@ class CycloneDxAdapter(BaseAdapter):
             flow_data["description"] = flow.description
         if flow.protocol:
             flow_data["protocols"] = [flow.protocol]
-        if flow.encrypted:
-            flow_data["encrypted"] = True
-        if flow.authenticated:
-            flow_data["authenticated"] = True
-        return flow_data
+        flow_data["encrypted"] = flow.encrypted
+        flow_data["authenticated"] = flow.authenticated
+        return self._merge_original(original, flow_data)
 
     def _build_assumptions(self, threat_model):
         assumptions = threat_model.assumptions or []
@@ -618,7 +667,10 @@ class CycloneDxAdapter(BaseAdapter):
             threat_lib = first_instance.threat_library
 
             # Abstract threat
-            abstract_ref = resolver.register("threat", threat_lib or first_instance)
+            original_threat = self._original_data(first_instance, "original_threat")
+            abstract_ref = self._register_ref(
+                resolver, "threat", threat_lib or first_instance, original_threat
+            )
             abstract_threat = {
                 "bom-ref": abstract_ref,
                 "name": (threat_lib.name if threat_lib else first_instance.threat_name),
@@ -656,12 +708,17 @@ class CycloneDxAdapter(BaseAdapter):
             if mitigation_refs:
                 abstract_threat["mitigations"] = list(mitigation_refs)
 
-            abstract_threats.append(abstract_threat)
+            abstract_threats.append(
+                self._merge_original(original_threat, abstract_threat)
+            )
 
             # Scenarios
             for inst_type, inst in instances:
+                original_scenario = self._original_data(inst, "original_scenario")
                 scenario = {
-                    "bom-ref": resolver.register("scenario", inst),
+                    "bom-ref": self._register_ref(
+                        resolver, "scenario", inst, original_scenario
+                    ),
                     "threat": abstract_ref,
                 }
 
@@ -718,7 +775,7 @@ class CycloneDxAdapter(BaseAdapter):
                     if scenario_meta.get(key):
                         scenario[key] = scenario_meta[key]
 
-                scenarios.append(scenario)
+                scenarios.append(self._merge_original(original_scenario, scenario))
 
         result = {}
         if abstract_threats:
@@ -903,7 +960,8 @@ class CycloneDxAdapter(BaseAdapter):
 
         controls = []
         for cm in countermeasures:
-            ref = resolver.register("control", cm)
+            original = self._original_data(cm)
+            ref = self._register_ref(resolver, "control", cm, original)
             control = {
                 "bom-ref": ref,
                 "name": cm.countermeasure_name
@@ -948,6 +1006,18 @@ class CycloneDxAdapter(BaseAdapter):
             if props:
                 control["properties"] = props
 
+            if cm.evidence_url:
+                original_refs = original.get("externalReferences", [])
+                if not any(
+                    ref.get("type") == "evidence" and ref.get("url") == cm.evidence_url
+                    for ref in original_refs
+                    if isinstance(ref, dict)
+                ):
+                    control["externalReferences"] = [
+                        *original_refs,
+                        {"type": "evidence", "url": cm.evidence_url},
+                    ]
+
             if cm.effectiveness is not None:
                 control["effectiveness"] = {
                     "percentage": cm.effectiveness,
@@ -985,7 +1055,7 @@ class CycloneDxAdapter(BaseAdapter):
             if satisfies_by_req:
                 control["satisfies"] = list(satisfies_by_req.values())
 
-            controls.append(control)
+            controls.append(self._merge_original(original, control))
 
         return controls
 
@@ -1202,6 +1272,7 @@ class CycloneDxAdapter(BaseAdapter):
             description=zone_data.get("description", ""),
             trust_level=zone_data.get("trustLevel") or 50,
             parent=parent,
+            format_metadata={"cyclonedx": {"original": copy.deepcopy(zone_data)}},
         )
         resolver.register("zone", bom_ref, zone)
         return zone
@@ -1276,7 +1347,7 @@ class CycloneDxAdapter(BaseAdapter):
             zone = resolver.resolve("zone", zone_ref)
 
         # Build Tier 3 metadata
-        cdx_meta = {"bom_ref": bom_ref}
+        cdx_meta = {"bom_ref": bom_ref, "original": copy.deepcopy(asset_data)}
         if (
             isinstance(asset_type, str)
             and asset_type
@@ -1409,7 +1480,12 @@ class CycloneDxAdapter(BaseAdapter):
             encrypted=flow_data.get("encrypted", False),
             authenticated=flow_data.get("authenticated", False),
             crosses_trust_zone=crosses_trust_zone,
-            format_metadata={"cyclonedx": {"bom_ref": bom_ref}},
+            format_metadata={
+                "cyclonedx": {
+                    "bom_ref": bom_ref,
+                    "original": copy.deepcopy(flow_data),
+                }
+            },
         )
         resolver.register("flow", bom_ref, flow)
         return flow
@@ -1481,7 +1557,7 @@ class CycloneDxAdapter(BaseAdapter):
                 control_functions = [category]
 
         # Store original status in format_metadata if it maps lossy
-        cdx_meta = {"bom_ref": bom_ref}
+        cdx_meta = {"bom_ref": bom_ref, "original": copy.deepcopy(control_data)}
         if cdx_status in ("proposed", "approved"):
             cdx_meta["original_status"] = cdx_status
 
@@ -1491,7 +1567,11 @@ class CycloneDxAdapter(BaseAdapter):
             for p in control_data.get("properties", [])
             if isinstance(p, dict) and "name" in p and "value" in p
         }
-        nist_id = props.get("nist:control-id") or props.get("crm:control-id", "")
+        nist_id = (
+            props.get("nist:control-id")
+            or props.get("crm:control-id")
+            or props.get("ctrl:id", "")
+        )
         origination = props.get("vault:origination", "")
         provider_system = props.get("vault:providing-system", "")
         if nist_id:
@@ -1627,6 +1707,7 @@ class CycloneDxAdapter(BaseAdapter):
             },
         )
         resolver.register("threat", bom_ref, threat_lib)
+        threat_lib._cyclonedx_original = copy.deepcopy(threat_data)
 
         self._import_threat_categories(threat_data, threat_lib)
 
@@ -1716,6 +1797,11 @@ class CycloneDxAdapter(BaseAdapter):
             "threat_name": threat_lib.name,
             "threat_description": threat_lib.description,
             "inherent_severity": "medium",
+            "format_metadata": {
+                "cyclonedx": {
+                    "original_threat": copy.deepcopy(threat_data),
+                }
+            },
         }
         if hasattr(threat_lib, "_triage_status"):
             defaults["triage_status"] = threat_lib._triage_status
@@ -1797,7 +1883,12 @@ class CycloneDxAdapter(BaseAdapter):
                 warnings.append(msg)
                 continue
 
-            cdx_meta = {"scenario_bom_ref": bom_ref}
+            cdx_meta = {
+                "scenario_bom_ref": bom_ref,
+                "original_scenario": copy.deepcopy(scenario_data),
+            }
+            if threat_lib and hasattr(threat_lib, "_cyclonedx_original"):
+                cdx_meta["original_threat"] = threat_lib._cyclonedx_original
             if scenario_meta:
                 cdx_meta["scenario"] = scenario_meta
 
@@ -1845,7 +1936,7 @@ class CycloneDxAdapter(BaseAdapter):
         scenario's bom-ref + Tier-3 metadata into a list and escalate the
         instance's severity to the highest one observed across scenarios.
         """
-        cdx_meta = instance.format_metadata.get("cyclonedx", {}) if not created else {}
+        cdx_meta = instance.format_metadata.get("cyclonedx", {})
         scenarios_seen = cdx_meta.get("scenarios", [])
         entry = {"scenario_bom_ref": bom_ref}
         if scenario_meta:
