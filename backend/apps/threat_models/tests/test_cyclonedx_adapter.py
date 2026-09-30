@@ -177,6 +177,18 @@ class TestCycloneDxImportMinimal(CycloneDxTestMixin, TestCase):
         self.assertTrue(flow.encrypted)
         self.assertTrue(flow.authenticated)
 
+    def test_flow_crosses_trust_zone_when_endpoints_differ(self):
+        # "User Requests": End User (External Zone) -> Web Application
+        # (Internal Zone) -- endpoints resolve to different zones.
+        flow = DataFlow.objects.get(label="User Requests")
+        self.assertTrue(flow.crosses_trust_zone)
+
+    def test_flow_does_not_cross_trust_zone_within_same_zone(self):
+        # "Database Queries": Web Application -> Patient Database, both
+        # in Internal Zone -- same zone on both ends, no crossing.
+        flow = DataFlow.objects.get(label="Database Queries")
+        self.assertFalse(flow.crosses_trust_zone)
+
     def test_threats_created(self):
         self.assertEqual(self.summary["threats"], 1)
         threat_lib = ThreatLibrary.objects.get(name="SQL Injection")
@@ -336,6 +348,54 @@ class TestCycloneDxImportFull(CycloneDxTestMixin, TestCase):
         self.assertTrue(dfd.is_primary)
         self.assertEqual(len(dfd.canvas_data["nodes"]), 3)
         self.assertEqual(len(dfd.canvas_data["edges"]), 2)
+
+    def test_dfd_component_node_auto_anchors_to_trust_zone_node(self):
+        """A DFD node with a resolved component but no explicit parentId is
+        anchored to its component's zone's trustZone canvas node, when one
+        exists on the same canvas (GSA-TTS/TTSE-petrified-forest-sspp#82,
+        item 8: "DFD canvas: zone parentId on external actor nodes")."""
+        json_data = load_fixture("cyclonedx_full.json")
+        json_data = json.loads(json.dumps(json_data))  # deep copy
+        blueprint = json_data["blueprints"][0]
+        dfd_vis = next(
+            v for v in blueprint["visualizations"] if v.get("type") == "precogly-dfd"
+        )
+        # Add a trustZone canvas node for "DMZ" (API Gateway's zone per the
+        # fixture's assets[]/zones[]), with no existing parentId anywhere.
+        dfd_vis["data"]["nodes"].append(
+            {
+                "id": "zone-node-dmz",
+                "type": "trustZone",
+                "position": {"x": 0, "y": 0},
+                "data": {"label": "DMZ"},
+            }
+        )
+
+        org = Organization.objects.create(name="Anchor Test Org", domain="anchor.test")
+        OrganizationMember.objects.create(
+            organization=org, user=self.user, role="security_team"
+        )
+        threat_model, _ = self.adapter.import_data(json_data, org, self.user)
+
+        dfd = DFD.objects.get(threat_model=threat_model)
+        zone_node = next(
+            n for n in dfd.canvas_data["nodes"] if n.get("id") == "zone-node-dmz"
+        )
+        gateway_node = next(
+            n
+            for n in dfd.canvas_data["nodes"]
+            if n.get("data", {}).get("label") == "API Gateway"
+        )
+        self.assertEqual(gateway_node.get("parent_id"), zone_node["id"])
+        # App Server is in a different zone (Trusted Internal, not DMZ,
+        # per the fixture) and that zone has no canvas node here, so it
+        # must NOT be anchored to the DMZ zone node.
+        app_server_node = next(
+            n
+            for n in dfd.canvas_data["nodes"]
+            if n.get("data", {}).get("label") == "App Server"
+        )
+        self.assertNotEqual(app_server_node.get("parent_id"), zone_node["id"])
 
 
 # =====================================================================

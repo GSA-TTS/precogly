@@ -578,9 +578,9 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                 also_mitigates.append(
                     {
                         "threat_id": other_threat.id,
-                        "threat_type": "component"
-                        if other_link.component_threat
-                        else "flow",
+                        "threat_type": (
+                            "component" if other_link.component_threat else "flow"
+                        ),
                         "threat_name": other_threat.threat_name
                         or (
                             other_threat.threat_library.name
@@ -618,12 +618,12 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                     "due_date": cm.due_date,
                     "external_ticket_url": cm.external_ticket_url,
                     "evidence_url": cm.evidence_url,
-                    "assigned_owner_email": cm.assigned_owner.email
-                    if cm.assigned_owner
-                    else None,
-                    "verified_by_email": cm.verified_by.email
-                    if cm.verified_by
-                    else None,
+                    "assigned_owner_email": (
+                        cm.assigned_owner.email if cm.assigned_owner else None
+                    ),
+                    "verified_by_email": (
+                        cm.verified_by.email if cm.verified_by else None
+                    ),
                     "standard_mappings": self._serialize_standard_mappings(cm),
                     "display_order": link.display_order,
                     "is_inherited": cm.is_inherited,
@@ -690,9 +690,9 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                     or cm.countermeasure_name,
                     "countermeasure_library_id": cm.countermeasure_library_id,
                     "status": cm.status,
-                    "assigned_owner_email": cm.assigned_owner.email
-                    if cm.assigned_owner
-                    else None,
+                    "assigned_owner_email": (
+                        cm.assigned_owner.email if cm.assigned_owner else None
+                    ),
                     "linked_threats": linked_threats,
                 }
             )
@@ -790,12 +790,12 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                 "dfd_name": None,
                 "is_analysis_only": True,
                 "label": flow.label,
-                "source_component_name": flow.source_component.name
-                if flow.source_component
-                else "",
-                "dest_component_name": flow.dest_component.name
-                if flow.dest_component
-                else "",
+                "source_component_name": (
+                    flow.source_component.name if flow.source_component else ""
+                ),
+                "dest_component_name": (
+                    flow.dest_component.name if flow.dest_component else ""
+                ),
             }
             dataflow_ids.append(flow.id)
 
@@ -1202,6 +1202,50 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
         filename = f"{safe_name}-cyclonedx-tm-bom.cdx.json"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+    @action(detail=True, methods=["get"], url_path="fidelity")
+    def fidelity(self, request, pk=None):
+        """Coverage stats for a threat model's countermeasure instances.
+
+        Lets external CI scripts assert minimum coverage thresholds before
+        accepting a CycloneDX import, without re-deriving the metrics from
+        a raw export. All fractions are 0.0-1.0; ``countermeasures`` is 0
+        when the threat model has no countermeasure instances yet, and
+        every coverage field is then also 0.0 rather than a divide-by-zero
+        error.
+        """
+        threat_model = self.get_object()
+        countermeasures = threat_model.countermeasures.all()
+        total = countermeasures.count()
+
+        def _fraction(predicate):
+            if total == 0:
+                return 0.0
+            covered = sum(1 for cm in countermeasures if predicate(cm))
+            return round(covered / total, 4)
+
+        def _has_nist_id(cm):
+            return bool(
+                (cm.format_metadata or {}).get("cyclonedx", {}).get("nist_control_id")
+            )
+
+        return Response(
+            {
+                "countermeasures": total,
+                "nist_id_coverage": _fraction(_has_nist_id),
+                "prose_coverage": _fraction(
+                    lambda cm: bool(cm.countermeasure_description)
+                ),
+                "evidence_url_coverage": _fraction(lambda cm: bool(cm.evidence_url)),
+                "compliance_standard_coverage": _fraction(
+                    lambda cm: cm.instance_standard_mappings.exists()
+                ),
+                "inherited_flag_coverage": _fraction(lambda cm: cm.is_inherited),
+                "component_library_linked": _fraction(
+                    lambda cm: cm.countermeasure_library_id is not None
+                ),
+            }
+        )
 
 
 class ThreatModelReferenceImageViewSet(viewsets.ModelViewSet):
