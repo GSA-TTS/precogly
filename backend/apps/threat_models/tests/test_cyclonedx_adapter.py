@@ -791,6 +791,27 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         }
         self.assertEqual(control_properties["precogly:control-nature"], "technical")
 
+    def test_multi_target_scenario_regroups_on_export(self):
+        json_data = load_fixture("cyclonedx_full.json")
+        json_data = json.loads(json.dumps(json_data))
+        scenario = json_data["threats"]["scenarios"][0]
+        scenario["bom-ref"] = "scenario-multi-target"
+        scenario["affectedAssets"] = ["asset-api-gateway-1", "asset-app-server-1"]
+
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+        exported = self.adapter.export_data(threat_model)
+        matching = [
+            item
+            for item in exported["threats"]["scenarios"]
+            if item["bom-ref"] == "scenario-multi-target"
+        ]
+
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(
+            set(matching[0]["affectedAssets"]),
+            {"asset-api-gateway-1", "asset-app-server-1"},
+        )
+
 
 # =====================================================================
 # Compliance Mapping Import Tests
