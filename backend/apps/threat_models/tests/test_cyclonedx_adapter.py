@@ -676,6 +676,121 @@ class TestCycloneDxRoundTrip(CycloneDxTestMixin, TestCase):
         self.assertEqual(node1["position"]["x"], 100)
         self.assertEqual(node1["position"]["y"], 200)
 
+    def test_entity_properties_and_bom_refs_round_trip_losslessly(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [
+                {
+                    "name": "Passthrough Test",
+                    "zones": [
+                        {
+                            "bom-ref": "zone-original",
+                            "name": "Zone",
+                            "properties": [{"name": "vendor:zone", "value": "kept"}],
+                        }
+                    ],
+                    "assets": [
+                        {
+                            "bom-ref": "asset-original",
+                            "name": "Asset",
+                            "type": "component",
+                            "zone": "zone-original",
+                            "properties": [{"name": "vendor:asset", "value": "kept"}],
+                        }
+                    ],
+                    "flows": [
+                        {
+                            "bom-ref": "flow-original",
+                            "name": "Loop",
+                            "source": "asset-original",
+                            "destination": "asset-original",
+                            "encrypted": False,
+                            "authenticated": False,
+                            "properties": [{"name": "vendor:flow", "value": "kept"}],
+                        }
+                    ],
+                }
+            ],
+            "controls": [
+                {
+                    "bom-ref": "control-original",
+                    "name": "Control",
+                    "properties": [
+                        {"name": "ctrl:id", "value": "AC-2"},
+                        {"name": "precogly:control-nature", "value": "physical"},
+                        {"name": "vendor:control", "value": "kept"},
+                    ],
+                    "externalReferences": [
+                        {"type": "evidence", "url": "https://example.test/evidence"},
+                        {"type": "documentation", "url": "https://example.test/docs"},
+                    ],
+                }
+            ],
+            "threats": {
+                "threats": [
+                    {
+                        "bom-ref": "threat-original",
+                        "name": "Threat",
+                        "affectedAssets": ["asset-original"],
+                        "properties": [{"name": "vendor:threat", "value": "kept"}],
+                    }
+                ],
+                "scenarios": [
+                    {
+                        "bom-ref": "scenario-original",
+                        "threat": "threat-original",
+                        "affectedAssets": ["asset-original"],
+                        "properties": [
+                            {"name": "precogly:threat-status", "value": "accept"},
+                            {"name": "vendor:scenario", "value": "kept"},
+                        ],
+                    }
+                ],
+            },
+        }
+
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+        imported_control = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        imported_control.control_nature = "technical"
+        imported_control.save(update_fields=["control_nature"])
+        exported = self.adapter.export_data(threat_model)
+        blueprint = exported["blueprints"][0]
+
+        for collection, bom_ref, property_name in (
+            (blueprint["zones"], "zone-original", "vendor:zone"),
+            (blueprint["assets"], "asset-original", "vendor:asset"),
+            (blueprint["flows"], "flow-original", "vendor:flow"),
+            (exported["controls"], "control-original", "vendor:control"),
+            (exported["threats"]["threats"], "threat-original", "vendor:threat"),
+            (
+                exported["threats"]["scenarios"],
+                "scenario-original",
+                "vendor:scenario",
+            ),
+        ):
+            item = next(entry for entry in collection if entry["bom-ref"] == bom_ref)
+            property_names = [prop["name"] for prop in item.get("properties", [])]
+            self.assertIn(property_name, property_names)
+            self.assertEqual(len(property_names), len(set(property_names)))
+
+        flow = blueprint["flows"][0]
+        self.assertIs(flow["encrypted"], False)
+        self.assertIs(flow["authenticated"], False)
+
+        control = exported["controls"][0]
+        self.assertEqual(
+            control["externalReferences"],
+            json_data["controls"][0]["externalReferences"],
+        )
+        self.assertEqual(
+            imported_control.format_metadata["cyclonedx"]["nist_control_id"], "AC-2"
+        )
+        control_properties = {
+            prop["name"]: prop["value"] for prop in control["properties"]
+        }
+        self.assertEqual(control_properties["precogly:control-nature"], "technical")
+
 
 # =====================================================================
 # Compliance Mapping Import Tests
