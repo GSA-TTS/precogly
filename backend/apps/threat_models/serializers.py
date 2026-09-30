@@ -15,6 +15,18 @@ from .models import (
 )
 
 
+class ThreatModelFidelitySerializer(serializers.Serializer):
+    """Stable 0.0-1.0 coverage contract for imported countermeasure fields."""
+
+    countermeasures = serializers.IntegerField(min_value=0)
+    nist_id_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    prose_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    evidence_url_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    compliance_standard_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    inherited_flag_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    component_library_linked = serializers.FloatField(min_value=0.0, max_value=1.0)
+
+
 class ThreatModelReferenceImageSerializer(serializers.ModelSerializer):
     """Serializer for ThreatModelReferenceImage model."""
 

@@ -6,7 +6,7 @@ import json
 import logging
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
@@ -27,6 +27,7 @@ from .models import (
 from .serializers import (
     OutOfScopeItemSerializer,
     ThreatModelCreateSerializer,
+    ThreatModelFidelitySerializer,
     ThreatModelListSerializer,
     ThreatModelReferenceImageSerializer,
     ThreatModelReferenceImageUploadSerializer,
@@ -1215,43 +1216,44 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
         error.
         """
         threat_model = self.get_object()
-        countermeasures = threat_model.countermeasures.all()
-        total = countermeasures.count()
+        counts = threat_model.countermeasures.aggregate(
+            total=Count("id"),
+            nist_id=Count(
+                "id",
+                filter=Q(format_metadata__cyclonedx__nist_control_id__isnull=False),
+            ),
+            prose=Count("id", filter=~Q(countermeasure_description="")),
+            evidence_url=Count("id", filter=~Q(evidence_url="")),
+            compliance_standard=Count(
+                "id",
+                filter=Q(instance_standard_mappings__isnull=False),
+                distinct=True,
+            ),
+            inherited_flag=Count(
+                "id",
+                filter=Q(format_metadata__cyclonedx__origination_present__isnull=False),
+            ),
+            component_library=Count(
+                "id", filter=Q(countermeasure_library__isnull=False)
+            ),
+        )
+        total = counts["total"]
 
-        def _fraction(predicate):
-            if total == 0:
-                return 0.0
-            covered = sum(1 for cm in countermeasures if predicate(cm))
-            return round(covered / total, 4)
+        def _fraction(key):
+            return round(counts[key] / total, 4) if total else 0.0
 
-        def _has_nist_id(cm):
-            return bool(
-                (cm.format_metadata or {}).get("cyclonedx", {}).get("nist_control_id")
-            )
-
-        return Response(
+        serializer = ThreatModelFidelitySerializer(
             {
                 "countermeasures": total,
-                "nist_id_coverage": _fraction(_has_nist_id),
-                "prose_coverage": _fraction(
-                    lambda cm: bool(cm.countermeasure_description)
-                ),
-                "evidence_url_coverage": _fraction(lambda cm: bool(cm.evidence_url)),
-                "compliance_standard_coverage": _fraction(
-                    lambda cm: cm.instance_standard_mappings.exists()
-                ),
-                "inherited_flag_coverage": _fraction(
-                    lambda cm: bool(
-                        (cm.format_metadata or {})
-                        .get("cyclonedx", {})
-                        .get("origination_present")
-                    )
-                ),
-                "component_library_linked": _fraction(
-                    lambda cm: cm.countermeasure_library_id is not None
-                ),
+                "nist_id_coverage": _fraction("nist_id"),
+                "prose_coverage": _fraction("prose"),
+                "evidence_url_coverage": _fraction("evidence_url"),
+                "compliance_standard_coverage": _fraction("compliance_standard"),
+                "inherited_flag_coverage": _fraction("inherited_flag"),
+                "component_library_linked": _fraction("component_library"),
             }
         )
+        return Response(serializer.data)
 
 
 class ThreatModelReferenceImageViewSet(viewsets.ModelViewSet):

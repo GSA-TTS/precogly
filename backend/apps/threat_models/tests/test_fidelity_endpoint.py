@@ -103,3 +103,17 @@ class ThreatModelFidelityEndpointTests(APITestCase):
         response = self._get()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["countermeasures"], 0)
+
+    def test_query_count_is_constant_as_countermeasures_grow(self):
+        for index in range(10):
+            InstanceCountermeasure.objects.create(
+                threat_model=self.tm,
+                countermeasure_name=f"Control {index}",
+                countermeasure_description="Documented",
+            )
+
+        with self.assertNumQueries(3):
+            response = self._get()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["countermeasures"], 10)
