@@ -712,70 +712,78 @@ class CycloneDxAdapter(BaseAdapter):
                 self._merge_original(original_threat, abstract_threat)
             )
 
-            # Scenarios
+            # Scenarios. Multiple operational threat instances can originate
+            # from one multi-target CycloneDX scenario, so regroup them by the
+            # preserved source bom-ref before export.
+            scenarios_by_ref = {}
             for inst_type, inst in instances:
-                original_scenario = self._original_data(inst, "original_scenario")
-                scenario = {
-                    "bom-ref": self._register_ref(
-                        resolver, "scenario", inst, original_scenario
-                    ),
-                    "threat": abstract_ref,
-                }
-
                 if inst_type == "component":
                     asset_ref = resolver.get_ref("asset", inst.component)
                 else:
                     asset_ref = resolver.get_ref("flow", inst.data_flow)
-                if asset_ref:
-                    scenario["affectedAssets"] = [asset_ref]
-
-                if inst.inherent_severity:
-                    scenario["riskScore"] = {
-                        "level": SEVERITY_TO_CDX_RISK_LEVEL.get(
-                            inst.inherent_severity, inst.inherent_severity
-                        ),
-                    }
-
-                # Actor
-                persona_links = list(inst.persona_links.all())
-                if persona_links:
-                    persona_ref = resolver.get_ref("persona", persona_links[0].persona)
-                    if persona_ref:
-                        scenario["actor"] = persona_ref
-
-                # Intent and access level
-                if inst.intent:
-                    scenario["intent"] = inst.intent
-                if inst.access_level:
-                    scenario["accessLevel"] = inst.access_level
-
-                # Triage status
-                scenario_props = []
-                if inst.triage_status != "open":
-                    scenario_props.append(
-                        {
-                            "name": "precogly:threat-status",
-                            "value": inst.triage_status,
-                        }
-                    )
-                if inst.decision_rationale:
-                    scenario_props.append(
-                        {
-                            "name": "precogly:decision-rationale",
-                            "value": inst.decision_rationale,
-                        }
-                    )
-                if scenario_props:
-                    scenario["properties"] = scenario_props
-
-                # Re-emit Tier 3 scenario data
                 cdx_meta = inst.format_metadata.get("cyclonedx", {})
-                scenario_meta = cdx_meta.get("scenario", {})
-                for key in ("motivation", "attackVector", "exploitability"):
-                    if scenario_meta.get(key):
-                        scenario[key] = scenario_meta[key]
+                originals = [
+                    entry.get("original_scenario")
+                    for entry in cdx_meta.get("scenarios", [])
+                    if entry.get("original_scenario")
+                ] or [self._original_data(inst, "original_scenario")]
+                for original_scenario in originals:
+                    source_ref = original_scenario.get("bom-ref")
+                    key = source_ref or f"instance-{inst_type}-{inst.id}"
+                    if key not in scenarios_by_ref:
+                        modeled_scenario = {
+                            "bom-ref": self._register_ref(
+                                resolver, "scenario", inst, original_scenario
+                            ),
+                            "threat": abstract_ref,
+                            "affectedAssets": [],
+                        }
+                        if inst.inherent_severity:
+                            modeled_scenario["riskScore"] = {
+                                "level": SEVERITY_TO_CDX_RISK_LEVEL.get(
+                                    inst.inherent_severity, inst.inherent_severity
+                                )
+                            }
+                        persona_links = list(inst.persona_links.all())
+                        if persona_links:
+                            persona_ref = resolver.get_ref(
+                                "persona", persona_links[0].persona
+                            )
+                            if persona_ref:
+                                modeled_scenario["actor"] = persona_ref
+                        if inst.intent:
+                            modeled_scenario["intent"] = inst.intent
+                        if inst.access_level:
+                            modeled_scenario["accessLevel"] = inst.access_level
+                        modeled_properties = []
+                        if inst.triage_status != "open":
+                            modeled_properties.append(
+                                {
+                                    "name": "precogly:threat-status",
+                                    "value": inst.triage_status,
+                                }
+                            )
+                        if inst.decision_rationale:
+                            modeled_properties.append(
+                                {
+                                    "name": "precogly:decision-rationale",
+                                    "value": inst.decision_rationale,
+                                }
+                            )
+                        if modeled_properties:
+                            modeled_scenario["properties"] = modeled_properties
+                        scenario = self._merge_original(
+                            original_scenario,
+                            modeled_scenario,
+                        )
+                        scenarios_by_ref[key] = scenario
+                    if (
+                        asset_ref
+                        and asset_ref not in scenarios_by_ref[key]["affectedAssets"]
+                    ):
+                        scenarios_by_ref[key]["affectedAssets"].append(asset_ref)
 
-                scenarios.append(self._merge_original(original_scenario, scenario))
+            scenarios.extend(scenarios_by_ref.values())
 
         result = {}
         if abstract_threats:
@@ -1921,12 +1929,19 @@ class CycloneDxAdapter(BaseAdapter):
                 continue
 
             self._merge_scenario_metadata(
-                instance, bom_ref, scenario_meta, severity, created
+                instance,
+                bom_ref,
+                scenario_meta,
+                severity,
+                created,
+                scenario_data,
             )
             resolver.register("scenario", bom_ref, instance)
 
     @staticmethod
-    def _merge_scenario_metadata(instance, bom_ref, scenario_meta, severity, created):
+    def _merge_scenario_metadata(
+        instance, bom_ref, scenario_meta, severity, created, original_scenario
+    ):
         """Fold a scenario's Tier-3 metadata into its (possibly shared) CIT/DFIT.
 
         The unique_together constraint on (component, threat_library) means
@@ -1939,6 +1954,7 @@ class CycloneDxAdapter(BaseAdapter):
         cdx_meta = instance.format_metadata.get("cyclonedx", {})
         scenarios_seen = cdx_meta.get("scenarios", [])
         entry = {"scenario_bom_ref": bom_ref}
+        entry["original_scenario"] = copy.deepcopy(original_scenario)
         if scenario_meta:
             entry["scenario"] = scenario_meta
         scenarios_seen.append(entry)
