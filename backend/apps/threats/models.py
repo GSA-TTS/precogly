@@ -648,28 +648,25 @@ class InstanceCountermeasure(TimestampedModel):
         default=Source.MANUAL,
         help_text="Where this countermeasure instance originated",
     )
-    poam_id = models.CharField(
-        max_length=50,
-        blank=True,
-        db_index=True,
-        help_text="OSCAL POA&M identifier (e.g. from a vault-derived CDX import)",
-    )
-    scheduled_completion = models.DateField(
-        null=True,
-        blank=True,
-        help_text="POA&M OSCAL scheduled-completion-date, distinct from due_date",
-    )
 
     @property
     def days_overdue(self) -> int | None:
-        """Days past scheduled_completion for an unresolved countermeasure, else None."""
-        if self.scheduled_completion and self.status not in (
+        """Days past due_date for an unresolved countermeasure, else None.
+
+        Reuses the existing ``due_date`` field rather than introducing a
+        parallel ``scheduled_completion`` column: a POA&M "scheduled
+        completion date" and the pre-existing "target completion date" are
+        the same concept under different vocabulary (FedRAMP vs. generic),
+        and this keeps the overdue computation applicable to every
+        countermeasure, not only CycloneDX-imported ones.
+        """
+        if self.due_date and self.status not in (
             self.Status.IMPLEMENTED,
             self.Status.VERIFIED,
         ):
             from datetime import date
 
-            delta = (date.today() - self.scheduled_completion).days
+            delta = (date.today() - self.due_date).days
             return delta if delta > 0 else None
         return None
 

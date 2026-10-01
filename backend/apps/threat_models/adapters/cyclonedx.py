@@ -1611,18 +1611,23 @@ class CycloneDxAdapter(BaseAdapter):
 
         # poam:* properties annotate an existing control as a POA&M item
         # rather than creating a separate entity (GSA-TTS/TTSE-petrified-forest-sspp#81).
+        #
+        # Per maintainer review on #559: poam:id has no first-class column —
+        # it round-trips fine through format_metadata.cyclonedx.poam, which
+        # is written below. poam:scheduled-completion maps onto the existing
+        # due_date field (same concept as OSCAL's scheduled-completion-date,
+        # just FedRAMP/general vocabulary) rather than a parallel column, so
+        # the overdue computation stays correct for every countermeasure, not
+        # only ones imported from a poam:*-tagged control.
         poam_props = {
             k[len("poam:") :]: v for k, v in props.items() if k.startswith("poam:")
         }
-        poam_id = poam_props.get("id", "")
-        scheduled_completion = None
+        due_date = None
         if poam_props.get("scheduled-completion"):
             from datetime import date
 
             try:
-                scheduled_completion = date.fromisoformat(
-                    poam_props["scheduled-completion"]
-                )
+                due_date = date.fromisoformat(poam_props["scheduled-completion"])
             except ValueError:
                 msg = (
                     f"Control '{name}': invalid poam:scheduled-completion date "
@@ -1656,13 +1661,12 @@ class CycloneDxAdapter(BaseAdapter):
             is_inherited=is_inherited,
             inherited_from_component_name=provider_system or "",
             evidence_url=evidence_url,
+            due_date=due_date,
             source=(
                 InstanceCountermeasure.Source.VAULT_IMPORT
                 if is_inherited or poam_props
                 else InstanceCountermeasure.Source.MANUAL
             ),
-            poam_id=poam_id,
-            scheduled_completion=scheduled_completion,
             format_metadata={"cyclonedx": cdx_meta},
         )
         resolver.register("control", bom_ref, cm)

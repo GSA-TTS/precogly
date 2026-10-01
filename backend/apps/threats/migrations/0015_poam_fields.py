@@ -12,16 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='instancecountermeasure',
-            name='poam_id',
-            field=models.CharField(blank=True, db_index=True, help_text='OSCAL POA&M identifier (e.g. from a vault-derived CDX import)', max_length=50),
-        ),
-        migrations.AddField(
-            model_name='instancecountermeasure',
-            name='scheduled_completion',
-            field=models.DateField(blank=True, help_text='POA&M OSCAL scheduled-completion-date, distinct from due_date', null=True),
-        ),
-        migrations.AddField(
-            model_name='instancecountermeasure',
             name='source',
             field=models.CharField(choices=[('manual', 'Manual'), ('vault_import', 'Vault Import'), ('pentest', 'Pentest')], default='manual', help_text='Where this countermeasure instance originated', max_length=20),
         ),

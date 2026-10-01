@@ -552,8 +552,6 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             "priority",
             "due_date",
             "external_ticket_url",
-            "poam_id",
-            "scheduled_completion",
             "days_overdue",
             "source",
             "verified_by",

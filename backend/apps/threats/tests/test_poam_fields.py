@@ -1,8 +1,14 @@
 """Tests for GSA-TTS/TTSE-petrified-forest-sspp#82/#81: POA&M model fields.
 
-A POA&M item is an ``InstanceCountermeasure`` with ``poam_id`` and
-``scheduled_completion`` set -- not a separate entity type. See the linked
-issues for the full rationale.
+A POA&M item is an ``InstanceCountermeasure`` with ``source`` set to
+``vault_import`` and a ``poam.id`` recorded in
+``format_metadata.cyclonedx.poam`` -- not a separate entity type, and not a
+first-class ``poam_id`` column (see maintainer review on #559: the "poam
+identifier" need not be queryable as a dedicated field; it round-trips
+through format_metadata the same way other CDX-origin properties do).
+``days_overdue`` is computed from the pre-existing ``due_date`` field, which
+is the same concept as OSCAL's "scheduled completion date" under different
+(FedRAMP/general) vocabulary. See the linked issues for the full rationale.
 """
 
 from datetime import date, timedelta
@@ -33,26 +39,31 @@ class PoamFieldsTestCase(TestCase):
         cm = InstanceCountermeasure.objects.create(threat_model=self.tm)
         self.assertEqual(cm.source, InstanceCountermeasure.Source.MANUAL)
 
-    def test_poam_id_and_scheduled_completion_are_queryable(self):
+    def test_poam_id_round_trips_through_format_metadata(self):
         InstanceCountermeasure.objects.create(
             threat_model=self.tm,
-            poam_id="POAM-1",
-            scheduled_completion=date(2026, 1, 1),
+            source=InstanceCountermeasure.Source.VAULT_IMPORT,
+            due_date=date(2026, 1, 1),
+            format_metadata={"cyclonedx": {"poam": {"id": "POAM-1"}}},
         )
         InstanceCountermeasure.objects.create(threat_model=self.tm)
 
-        with_poam = InstanceCountermeasure.objects.exclude(poam_id="")
+        with_poam = InstanceCountermeasure.objects.filter(
+            format_metadata__cyclonedx__poam__id="POAM-1"
+        )
         self.assertEqual(with_poam.count(), 1)
-        self.assertEqual(with_poam.first().poam_id, "POAM-1")
+        self.assertEqual(
+            with_poam.first().format_metadata["cyclonedx"]["poam"]["id"], "POAM-1"
+        )
 
-    def test_days_overdue_none_when_no_scheduled_completion(self):
+    def test_days_overdue_none_when_no_due_date(self):
         cm = InstanceCountermeasure.objects.create(threat_model=self.tm)
         self.assertIsNone(cm.days_overdue)
 
     def test_days_overdue_none_when_not_yet_due(self):
         cm = InstanceCountermeasure.objects.create(
             threat_model=self.tm,
-            scheduled_completion=date.today() + timedelta(days=5),
+            due_date=date.today() + timedelta(days=5),
         )
         self.assertIsNone(cm.days_overdue)
 
@@ -60,7 +71,7 @@ class PoamFieldsTestCase(TestCase):
         cm = InstanceCountermeasure.objects.create(
             threat_model=self.tm,
             status=InstanceCountermeasure.Status.GAP,
-            scheduled_completion=date.today() - timedelta(days=10),
+            due_date=date.today() - timedelta(days=10),
         )
         self.assertEqual(cm.days_overdue, 10)
 
@@ -68,7 +79,7 @@ class PoamFieldsTestCase(TestCase):
         cm = InstanceCountermeasure.objects.create(
             threat_model=self.tm,
             status=InstanceCountermeasure.Status.IMPLEMENTED,
-            scheduled_completion=date.today() - timedelta(days=10),
+            due_date=date.today() - timedelta(days=10),
         )
         self.assertIsNone(cm.days_overdue)
 
@@ -76,6 +87,33 @@ class PoamFieldsTestCase(TestCase):
         cm = InstanceCountermeasure.objects.create(
             threat_model=self.tm,
             status=InstanceCountermeasure.Status.VERIFIED,
-            scheduled_completion=date.today() - timedelta(days=10),
+            due_date=date.today() - timedelta(days=10),
         )
         self.assertIsNone(cm.days_overdue)
+
+    def test_overdue_countermeasures_are_queryable(self):
+        InstanceCountermeasure.objects.create(
+            threat_model=self.tm,
+            status=InstanceCountermeasure.Status.GAP,
+            due_date=date.today() - timedelta(days=3),
+        )
+        InstanceCountermeasure.objects.create(
+            threat_model=self.tm,
+            status=InstanceCountermeasure.Status.GAP,
+            due_date=date.today() + timedelta(days=3),
+        )
+        InstanceCountermeasure.objects.create(
+            threat_model=self.tm,
+            status=InstanceCountermeasure.Status.IMPLEMENTED,
+            due_date=date.today() - timedelta(days=3),
+        )
+
+        overdue = InstanceCountermeasure.objects.filter(
+            due_date__lt=date.today()
+        ).exclude(
+            status__in=[
+                InstanceCountermeasure.Status.IMPLEMENTED,
+                InstanceCountermeasure.Status.VERIFIED,
+            ]
+        )
+        self.assertEqual(overdue.count(), 1)

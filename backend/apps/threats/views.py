@@ -751,12 +751,17 @@ class InstanceCountermeasureViewSet(viewsets.ModelViewSet):
             )
         )
         if _truthy(self.request.query_params.get("has_poam")):
-            qs = qs.exclude(poam_id="")
+            # poam_id has no first-class column (see model docstring on
+            # Source/days_overdue); a CDX-imported POA&M item is identified
+            # by the presence of format_metadata.cyclonedx.poam.id instead.
+            qs = qs.filter(
+                format_metadata__cyclonedx__poam__id__isnull=False
+            ).exclude(format_metadata__cyclonedx__poam__id="")
         if _truthy(self.request.query_params.get("overdue")):
             from datetime import date
 
             qs = qs.filter(
-                scheduled_completion__lt=date.today(),
+                due_date__lt=date.today(),
             ).exclude(
                 status__in=[
                     InstanceCountermeasure.Status.IMPLEMENTED,
