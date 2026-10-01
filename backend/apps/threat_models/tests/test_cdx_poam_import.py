@@ -88,9 +88,7 @@ class CdxPoamImportTestCase(TestCase):
                 ],
             }
         )
-        threat_model, summary = self.adapter.import_data(
-            json_data, self.org, self.user
-        )
+        threat_model, summary = self.adapter.import_data(json_data, self.org, self.user)
 
         cm = InstanceCountermeasure.objects.get(threat_model=threat_model)
         self.assertEqual(cm.format_metadata["cyclonedx"]["poam"]["id"], "POAM-43")
