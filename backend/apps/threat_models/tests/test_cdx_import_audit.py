@@ -18,7 +18,11 @@ from apps.organizations.models import (
     TeamMembership,
 )
 from apps.systems.models import DataFlow
-from apps.threats.models import InstanceCountermeasure, InstanceCountermeasureStandard
+from apps.threats.models import (
+    ComponentInstanceThreat,
+    InstanceCountermeasure,
+    InstanceCountermeasureStandard,
+)
 
 from ..adapters import CycloneDxAdapter
 
@@ -209,6 +213,52 @@ class CdxImportAuditTestCase(TestCase):
         self.assertEqual(cm.instance_standard_mappings.count(), 0)
         self.assertTrue(
             any("req-does-not-exist" in w for w in summary.get("warnings", []))
+        )
+
+    def test_duplicate_threat_asset_scenarios_merge_and_round_trip(self):
+        json_data = _blueprint(
+            blueprint={
+                "name": "Duplicate Scenario Test",
+                "zones": [{"bom-ref": "zone-1", "name": "Zone"}],
+                "assets": [
+                    {
+                        "bom-ref": "asset-1",
+                        "name": "Application",
+                        "type": "component",
+                        "zone": "zone-1",
+                    }
+                ],
+            }
+        )
+        json_data["threats"] = {
+            "threats": [{"bom-ref": "threat-1", "name": "Shared Threat"}],
+            "scenarios": [
+                {
+                    "bom-ref": "scenario-1",
+                    "threat": "threat-1",
+                    "affectedAssets": ["asset-1"],
+                    "motivation": "First path",
+                },
+                {
+                    "bom-ref": "scenario-2",
+                    "threat": "threat-1",
+                    "affectedAssets": ["asset-1"],
+                    "motivation": "Second path",
+                },
+            ],
+        }
+
+        tm, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        instance = ComponentInstanceThreat.objects.get(component__threat_model=tm)
+        snapshots = instance.format_metadata["cyclonedx"]["scenarios"]
+        self.assertCountEqual(
+            [item["bom-ref"] for item in snapshots], ["scenario-1", "scenario-2"]
+        )
+        exported = self.adapter.export_data(tm)
+        scenarios = exported["threats"]["scenarios"]
+        self.assertCountEqual(
+            [item["bom-ref"] for item in scenarios], ["scenario-1", "scenario-2"]
         )
 
     # --- item 3: externalReferences evidence -> evidence_url --------------

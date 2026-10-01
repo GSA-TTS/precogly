@@ -1,5 +1,6 @@
 """CycloneDX 2.0 TM-BOM format adapter — import and export."""
 
+import copy
 import logging
 from collections import defaultdict
 from uuid import uuid4
@@ -21,7 +22,6 @@ from .cyclonedx_enum_maps import (
     CONTROL_STATUS_TO_CDX,
     LEVEL_TO_CDX,
     RESPONSE_TO_CDX,
-    SEVERITY_TO_CDX_RISK_LEVEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -696,67 +696,35 @@ class CycloneDxAdapter(BaseAdapter):
 
             abstract_threats.append(abstract_threat)
 
-            # Scenarios
+            # Scenarios. One Precogly instance represents a unique
+            # (target, threat_library) pair, while source CycloneDX may carry
+            # multiple scenario records for that pair. Re-emit each preserved
+            # scenario snapshot so source cardinality and refs survive.
             for inst_type, inst in instances:
-                scenario = {
-                    "bom-ref": resolver.register("scenario", inst),
-                    "threat": abstract_ref,
-                }
-
                 if inst_type == "component":
                     asset_ref = resolver.get_ref("asset", inst.component)
                 else:
                     asset_ref = resolver.get_ref("flow", inst.data_flow)
-                if asset_ref:
-                    scenario["affectedAssets"] = [asset_ref]
-
-                if inst.inherent_severity:
-                    scenario["riskScore"] = {
-                        "level": SEVERITY_TO_CDX_RISK_LEVEL.get(
-                            inst.inherent_severity, inst.inherent_severity
-                        ),
-                    }
-
-                # Actor
-                persona_links = list(inst.persona_links.all())
-                if persona_links:
-                    persona_ref = resolver.get_ref("persona", persona_links[0].persona)
-                    if persona_ref:
-                        scenario["actor"] = persona_ref
-
-                # Intent and access level
-                if inst.intent:
-                    scenario["intent"] = inst.intent
-                if inst.access_level:
-                    scenario["accessLevel"] = inst.access_level
-
-                # Triage status
-                scenario_props = []
-                if inst.triage_status != "open":
-                    scenario_props.append(
-                        {
-                            "name": "precogly:threat-status",
-                            "value": inst.triage_status,
-                        }
-                    )
-                if inst.decision_rationale:
-                    scenario_props.append(
-                        {
-                            "name": "precogly:decision-rationale",
-                            "value": inst.decision_rationale,
-                        }
-                    )
-                if scenario_props:
-                    scenario["properties"] = scenario_props
-
-                # Re-emit Tier 3 scenario data
                 cdx_meta = inst.format_metadata.get("cyclonedx", {})
-                scenario_meta = cdx_meta.get("scenario", {})
-                for key in ("motivation", "attackVector", "exploitability"):
-                    if scenario_meta.get(key):
-                        scenario[key] = scenario_meta[key]
-
-                scenarios.append(scenario)
+                snapshots = cdx_meta.get("scenarios") or []
+                if not snapshots:
+                    snapshots = [
+                        {
+                            "bom-ref": cdx_meta.get("scenario_bom_ref"),
+                            **(cdx_meta.get("scenario") or {}),
+                        }
+                    ]
+                for index, snapshot in enumerate(snapshots):
+                    scenario = copy.deepcopy(snapshot)
+                    scenario["bom-ref"] = scenario.get("bom-ref") or (
+                        resolver.register("scenario", inst)
+                        if index == 0
+                        else f"{resolver.get_ref('scenario', inst)}-{index + 1}"
+                    )
+                    scenario["threat"] = abstract_ref
+                    if asset_ref:
+                        scenario["affectedAssets"] = [asset_ref]
+                    scenarios.append(scenario)
 
         result = {}
         if abstract_threats:
@@ -1906,17 +1874,32 @@ class CycloneDxAdapter(BaseAdapter):
                 instance_kwargs["decision_rationale"] = decision_rationale
 
             if isinstance(target, OrgsystemComponent):
-                instance = ComponentInstanceThreat.objects.create(
+                instance, _ = ComponentInstanceThreat.objects.get_or_create(
                     component=target,
-                    **instance_kwargs,
+                    threat_library=threat_lib,
+                    defaults=instance_kwargs,
                 )
                 resolver.register("scenario", bom_ref, instance)
             elif isinstance(target, DataFlow):
-                instance = DataFlowInstanceThreat.objects.create(
+                instance, _ = DataFlowInstanceThreat.objects.get_or_create(
                     data_flow=target,
-                    **instance_kwargs,
+                    threat_library=threat_lib,
+                    defaults=instance_kwargs,
                 )
                 resolver.register("scenario", bom_ref, instance)
+            else:
+                continue
+
+            snapshot = copy.deepcopy(scenario_data)
+            metadata = dict(instance.format_metadata or {})
+            cyclonedx = dict(metadata.get("cyclonedx") or {})
+            snapshots = list(cyclonedx.get("scenarios") or [])
+            if not any(item.get("bom-ref") == bom_ref for item in snapshots):
+                snapshots.append(snapshot)
+            cyclonedx["scenarios"] = snapshots
+            metadata["cyclonedx"] = cyclonedx
+            instance.format_metadata = metadata
+            instance.save(update_fields=["format_metadata", "updated_at"])
 
     def _import_risk(self, risk_data, threat_model, resolver):
         from apps.threats.models import (
