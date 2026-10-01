@@ -1513,7 +1513,24 @@ class CycloneDxAdapter(BaseAdapter):
             return
 
         for req_ref in satisfies:
-            req_info = resolver.resolve("requirement", req_ref)
+            # CycloneDX TM-BOM sources use both forms in the wild:
+            #   "satisfies": ["requirement-bom-ref"]
+            # and the compact snapshot form emitted by vault/tooling:
+            #   "satisfies": [{"reference": "AC-2", "framework": "nist-..."}]
+            # Resolve string refs through the requirement registry; consume
+            # object snapshots directly so dicts never reach the hash lookup.
+            if isinstance(req_ref, dict):
+                reference = req_ref.get("reference") or req_ref.get("control-id") or ""
+                framework = (
+                    req_ref.get("framework") or req_ref.get("framework_name") or ""
+                )
+                req_info = {
+                    "section_code": reference,
+                    "framework_name": framework,
+                    "description": req_ref.get("description", ""),
+                }
+            else:
+                req_info = resolver.resolve("requirement", req_ref)
             if not isinstance(req_info, dict):
                 msg = (
                     f"Control '{cm.countermeasure_name}': satisfies reference "

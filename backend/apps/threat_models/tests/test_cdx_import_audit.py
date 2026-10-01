@@ -162,6 +162,36 @@ class CdxImportAuditTestCase(TestCase):
             ["SI-4", "CP-9"],
         )
 
+    def test_satisfies_object_snapshot_creates_mapping(self):
+        """Vault-generated CDX uses compact object snapshots, not bom-ref strings."""
+        json_data = _blueprint(
+            controls=[
+                {
+                    "bom-ref": "control-object-snapshot",
+                    "name": "Object Snapshot",
+                    "status": "implemented",
+                    "satisfies": [
+                        {
+                            "reference": "AC-4",
+                            "framework": "nist-800-53-r5",
+                            "description": "Information flow enforcement",
+                        }
+                    ],
+                }
+            ],
+        )
+
+        tm, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        cm = InstanceCountermeasure.objects.get(threat_model=tm)
+        mapping = InstanceCountermeasureStandard.objects.get(countermeasure=cm)
+        self.assertIsNone(mapping.requirement)
+        self.assertEqual(mapping.section_code, "AC-4")
+        self.assertEqual(mapping.framework_name, "nist-800-53-r5")
+        self.assertEqual(
+            mapping.requirement_description, "Information flow enforcement"
+        )
+
     def test_satisfies_dangling_reference_warns_and_skips(self):
         json_data = _blueprint(
             controls=[
