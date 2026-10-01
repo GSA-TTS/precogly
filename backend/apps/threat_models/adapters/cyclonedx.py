@@ -1011,6 +1011,15 @@ class CycloneDxAdapter(BaseAdapter):
                 props.append(
                     {"name": "precogly:control-nature", "value": control_nature}
                 )
+            if cm.poam_id:
+                props.append({"name": "poam:id", "value": cm.poam_id})
+            if cm.scheduled_completion:
+                props.append(
+                    {
+                        "name": "poam:scheduled-completion",
+                        "value": cm.scheduled_completion.isoformat(),
+                    }
+                )
             if props:
                 control["properties"] = props
 
@@ -1597,6 +1606,30 @@ class CycloneDxAdapter(BaseAdapter):
             "",
         )
 
+        # poam:* properties annotate an existing control as a POA&M item
+        # rather than creating a separate entity (GSA-TTS/TTSE-petrified-forest-sspp#81).
+        poam_props = {
+            k[len("poam:") :]: v for k, v in props.items() if k.startswith("poam:")
+        }
+        poam_id = poam_props.get("id", "")
+        scheduled_completion = None
+        if poam_props.get("scheduled-completion"):
+            from datetime import date
+
+            try:
+                scheduled_completion = date.fromisoformat(
+                    poam_props["scheduled-completion"]
+                )
+            except ValueError:
+                msg = (
+                    f"Control '{name}': invalid poam:scheduled-completion date "
+                    f"'{poam_props['scheduled-completion']}', ignored."
+                )
+                logger.warning(msg)
+                warnings.append(msg)
+        if poam_props:
+            cdx_meta["poam"] = poam_props
+
         cm = InstanceCountermeasure.objects.create(
             threat_model=threat_model,
             countermeasure_name=name,
@@ -1608,6 +1641,13 @@ class CycloneDxAdapter(BaseAdapter):
             is_inherited=is_inherited,
             inherited_from_component_name=provider_system or "",
             evidence_url=evidence_url,
+            source=(
+                InstanceCountermeasure.Source.VAULT_IMPORT
+                if is_inherited or poam_props
+                else InstanceCountermeasure.Source.MANUAL
+            ),
+            poam_id=poam_id,
+            scheduled_completion=scheduled_completion,
             format_metadata={"cyclonedx": cdx_meta},
         )
         resolver.register("control", bom_ref, cm)

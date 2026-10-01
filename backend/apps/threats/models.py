@@ -583,7 +583,18 @@ class InstanceCountermeasure(TimestampedModel):
         related_name="instances",
         help_text="Null means orphaned/custom countermeasure (library item was removed)",
     )
+    class Source(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        VAULT_IMPORT = "vault_import", "Vault Import"
+        PENTEST = "pentest", "Pentest"
+
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.GAP)
+    source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        default=Source.MANUAL,
+        help_text="Where this countermeasure instance originated",
+    )
     verified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -635,6 +646,17 @@ class InstanceCountermeasure(TimestampedModel):
     external_ticket_url = models.URLField(
         blank=True, help_text="Link to Jira/GitHub/etc. ticket"
     )
+    poam_id = models.CharField(
+        max_length=50,
+        blank=True,
+        db_index=True,
+        help_text="OSCAL POA&M identifier (e.g. from a vault-derived CDX import)",
+    )
+    scheduled_completion = models.DateField(
+        null=True,
+        blank=True,
+        help_text="POA&M OSCAL scheduled-completion-date, distinct from due_date",
+    )
     format_metadata = models.JSONField(default=dict, blank=True)
 
     # Zone inheritance tracking
@@ -644,6 +666,22 @@ class InstanceCountermeasure(TimestampedModel):
 
     class Meta:
         ordering = ["created_at"]
+
+    @property
+    def days_overdue(self):
+        """Days past scheduled_completion, excluding closed-out countermeasures.
+
+        Returns None when there is no scheduled_completion, the control is
+        not yet overdue, or the control is already IMPLEMENTED/VERIFIED.
+        """
+        if not self.scheduled_completion:
+            return None
+        if self.status in (self.Status.IMPLEMENTED, self.Status.VERIFIED):
+            return None
+        from django.utils.timezone import localdate
+
+        delta = (localdate() - self.scheduled_completion).days
+        return delta if delta > 0 else None
 
     def __str__(self):
         return f"CM:{self.countermeasure_name or self.countermeasure_library}"

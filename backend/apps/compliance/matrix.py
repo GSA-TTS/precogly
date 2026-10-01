@@ -178,7 +178,7 @@ def _cm_payload(ic: InstanceCountermeasure, section_code: str) -> dict:
 
     fm = ic.format_metadata or {}
     cdx = fm.get("cyclonedx") or {}
-    poam = cdx.get("poam") or {}
+    legacy_poam = cdx.get("poam") or {}
     inheritance = {
         "is_inherited": bool(cdx.get("is_inherited", ic.is_inherited)),
         "providing_system": cdx.get("providing_system")
@@ -187,9 +187,17 @@ def _cm_payload(ic: InstanceCountermeasure, section_code: str) -> dict:
         "responsibility_source": cdx.get("responsibility_source", ""),
         "control_type": cdx.get("control_type") or ic.control_nature or "",
     }
+    # Prefer the first-class model fields; fall back to the legacy
+    # format_metadata.cyclonedx.poam blob for older imports that predate the
+    # poam_id/scheduled_completion columns.
     poam_payload = {
-        "poam_id": poam.get("poam_id", ""),
-        "due_date": poam.get("due_date", ""),
+        "poam_id": ic.poam_id or legacy_poam.get("poam_id", ""),
+        "due_date": (
+            ic.scheduled_completion.isoformat()
+            if ic.scheduled_completion
+            else legacy_poam.get("due_date", "")
+        ),
+        "days_overdue": ic.days_overdue,
     }
 
     return {

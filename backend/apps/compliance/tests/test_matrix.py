@@ -191,7 +191,11 @@ class ComplianceMatrixTests(APITestCase):
             "responsibilitySource": "crm",
             "controlType": "preventive",
         }
-        assert cm["poam"] == {"poamId": "POAM-123", "dueDate": "2026-12-31"}
+        assert cm["poam"] == {
+            "poamId": "POAM-123",
+            "dueDate": "2026-12-31",
+            "daysOverdue": None,
+        }
 
     def test_include_empty_shows_seeded_but_unlinked_requirements(self):
         self.client.force_authenticate(self.user)

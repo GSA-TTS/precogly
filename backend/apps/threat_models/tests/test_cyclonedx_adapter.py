@@ -1,6 +1,7 @@
 """Tests for CycloneDX 2.0 TM-BOM adapter import and export."""
 
 import json
+from datetime import date
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
@@ -924,6 +925,138 @@ class TestCycloneDxComplianceMappings(CycloneDxTestMixin, TestCase):
         control = InstanceCountermeasure.objects.get(threat_model=threat_model)
         mapping = InstanceCountermeasureStandard.objects.get(countermeasure=control)
         self.assertEqual(mapping.requirement, self.requirement)
+
+
+# =====================================================================
+# POA&M Property Import Tests (GSA-TTS/TTSE-petrified-forest-sspp#81/#82)
+# =====================================================================
+
+
+class TestCycloneDxPoamImport(CycloneDxTestMixin, TestCase):
+    """``poam:*`` control properties annotate the existing control instance
+    rather than creating a separate entity."""
+
+    def test_poam_properties_populate_countermeasure(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Poam Import Test"}],
+            "controls": [
+                {
+                    "bom-ref": "control-poam-1",
+                    "name": "Encrypt data at rest",
+                    "status": "recommended",
+                    "properties": [
+                        {"name": "poam:id", "value": "POAM-42"},
+                        {"name": "poam:scheduled-completion", "value": "2026-12-31"},
+                    ],
+                }
+            ],
+        }
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        cm = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertEqual(cm.poam_id, "POAM-42")
+        self.assertEqual(cm.scheduled_completion, date(2026, 12, 31))
+        self.assertEqual(cm.source, InstanceCountermeasure.Source.VAULT_IMPORT)
+        self.assertEqual(cm.format_metadata["cyclonedx"]["poam"]["id"], "POAM-42")
+
+    def test_invalid_scheduled_completion_date_is_warned_and_ignored(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Poam Import Test"}],
+            "controls": [
+                {
+                    "bom-ref": "control-poam-2",
+                    "name": "Bad date control",
+                    "status": "recommended",
+                    "properties": [
+                        {"name": "poam:id", "value": "POAM-43"},
+                        {"name": "poam:scheduled-completion", "value": "not-a-date"},
+                    ],
+                }
+            ],
+        }
+        threat_model, summary = self.adapter.import_data(
+            json_data, self.org, self.user
+        )
+
+        cm = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertEqual(cm.poam_id, "POAM-43")
+        self.assertIsNone(cm.scheduled_completion)
+        self.assertTrue(
+            any("scheduled-completion" in w for w in summary.get("warnings", []))
+        )
+
+    def test_control_without_poam_properties_defaults_to_manual_source(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Poam Import Test"}],
+            "controls": [
+                {
+                    "bom-ref": "control-plain-1",
+                    "name": "Plain control",
+                    "status": "recommended",
+                }
+            ],
+        }
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        cm = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertEqual(cm.poam_id, "")
+        self.assertIsNone(cm.scheduled_completion)
+        self.assertEqual(cm.source, InstanceCountermeasure.Source.MANUAL)
+
+    def test_vault_origination_sets_vault_import_source_without_poam(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Poam Import Test"}],
+            "controls": [
+                {
+                    "bom-ref": "control-inherited-1",
+                    "name": "Inherited control",
+                    "status": "recommended",
+                    "properties": [
+                        {"name": "vault:origination", "value": "inherited"},
+                        {"name": "vault:providing-system", "value": "Platform IAM"},
+                    ],
+                }
+            ],
+        }
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+
+        cm = InstanceCountermeasure.objects.get(threat_model=threat_model)
+        self.assertTrue(cm.is_inherited)
+        self.assertEqual(cm.source, InstanceCountermeasure.Source.VAULT_IMPORT)
+        self.assertEqual(cm.poam_id, "")
+
+    def test_poam_properties_round_trip_on_export(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [{"name": "Poam Export Test"}],
+            "controls": [
+                {
+                    "bom-ref": "control-poam-export",
+                    "name": "Export round trip",
+                    "status": "recommended",
+                    "properties": [
+                        {"name": "poam:id", "value": "POAM-99"},
+                        {"name": "poam:scheduled-completion", "value": "2027-03-15"},
+                    ],
+                }
+            ],
+        }
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+        exported = self.adapter.export_data(threat_model)
+
+        control = exported["controls"][0]
+        props = {p["name"]: p["value"] for p in control.get("properties", [])}
+        self.assertEqual(props.get("poam:id"), "POAM-99")
+        self.assertEqual(props.get("poam:scheduled-completion"), "2027-03-15")
 
 
 # =====================================================================
