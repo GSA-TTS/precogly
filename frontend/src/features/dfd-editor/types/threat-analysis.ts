@@ -1,4 +1,5 @@
 import type { SecurityStandard, TaxonomyEntry } from '@/types/domain'
+import { isActiveThreat, type TriageStatus } from '@/types/triage'
 
 /**
  * Compliance standard mapping from backend.
@@ -105,7 +106,7 @@ export const THREAT_STATUS_CONFIG: Record<
 
 /**
  * A countermeasure instance for a specific component-threat pair
- * Includes countermeasure metadata from backend (name, controlType)
+ * Includes countermeasure metadata from backend (name, controlFunctions, controlNature)
  */
 export interface ComponentThreatCountermeasure {
   id: string
@@ -128,7 +129,8 @@ export interface ComponentThreatCountermeasure {
   // Countermeasure metadata from backend (eliminates need for frontend registry lookup)
   countermeasureName?: string
   countermeasureDescription?: string
-  controlType?: string
+  controlFunctions?: string[]
+  controlNature?: string
   // Compliance standard mappings from backend
   standardMappings?: ComplianceStandardMapping[]
   // Priority level
@@ -168,10 +170,10 @@ export interface ComponentThreat {
   componentId: string
   // Reference to threat definition (e.g., "lib-123")
   threatId: string
-  // Whether this threat was dismissed/hidden
-  dismissed: boolean
-  // Reason for dismissal (if dismissed)
-  dismissalReason?: string
+  // Triage status for this threat
+  triageStatus: TriageStatus
+  // Rationale for triage decision
+  decisionRationale?: string
   // Custom notes
   notes?: string
   // Countermeasures for this component-threat
@@ -256,7 +258,7 @@ export function summarizeComponentThreats(
   technology: string | undefined,
   threats: ComponentThreat[]
 ): ComponentThreatSummary {
-  const componentThreats = threats.filter((t) => t.componentId === componentId && !t.dismissed)
+  const componentThreats = threats.filter((t) => t.componentId === componentId && isActiveThreat(t.triageStatus))
 
   let exposed = 0
   let addressable = 0
@@ -296,7 +298,7 @@ export interface ExpandedComponentThreat {
   taxonomyEntries?: TaxonomyEntry[]
   // Status derived from countermeasures
   status: ThreatStatus
-  dismissed: boolean
+  triageStatus: TriageStatus
   notes?: string
   // Expanded countermeasures
   countermeasures: ExpandedCountermeasure[]

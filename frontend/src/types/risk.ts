@@ -30,7 +30,7 @@ export interface RiskThreatEntry {
   threatType: 'component' | 'flow'
   threatName: string
   status: string
-  isDismissed: boolean
+  triageStatus: string
 }
 
 export interface ScoringFieldSchema {

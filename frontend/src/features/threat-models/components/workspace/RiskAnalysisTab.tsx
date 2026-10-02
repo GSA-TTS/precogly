@@ -53,6 +53,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
   useRisks,
   useRisk,
   useCreateRisk,
@@ -61,6 +68,8 @@ import {
   useRecalculateRisk,
   useScoringMethods,
   useBulkUpdateRisks,
+  RISK_PAGE_SIZES,
+  DEFAULT_RISK_PAGE_SIZE,
 } from '@/features/threat-models/api/risks'
 import type {
   Risk,
@@ -71,6 +80,7 @@ import type {
   ScoringMethod,
 } from '@/types/risk'
 import type { ComponentThreat } from '@/features/dfd-editor/types/threat-analysis'
+import { isActiveThreat } from '@/types/triage'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useOrganizationMembers } from '@/features/organization/api/organizations'
 
@@ -230,7 +240,7 @@ function ThreatPicker({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [filter, setFilter] = useState('')
 
-  const activeThreats = componentThreats.filter((t) => !t.dismissed && t.backendThreatId)
+  const activeThreats = componentThreats.filter((t) => isActiveThreat(t.triageStatus) && t.backendThreatId)
   const selectedCount = selectedComponentThreatIds.length + selectedFlowThreatIds.length
 
   if (activeThreats.length === 0) {
@@ -698,10 +708,14 @@ function BulkActionBar({
   selectedIds,
   threatModelId,
   onClear,
+  isPaginated,
 }: {
   selectedIds: number[]
   threatModelId: string
   onClear: () => void
+  /** Select-all ticks the loaded rows, which is every row only when the register
+      fits on one page. Past that the label has to say so. */
+  isPaginated: boolean
 }) {
   const bulkUpdate = useBulkUpdateRisks(threatModelId)
   const [bulkResponse, setBulkResponse] = useState<RiskResponse | ''>('')
@@ -719,7 +733,9 @@ function BulkActionBar({
 
   return (
     <div className="flex items-center gap-3 p-3 bg-muted/60 border rounded-lg">
-      <span className="text-sm font-medium">{selectedIds.length} selected</span>
+      <span className="text-sm font-medium">
+        {selectedIds.length} selected{isPaginated && ' on this page'}
+      </span>
       <Select value={bulkResponse} onValueChange={(v) => setBulkResponse(v as RiskResponse)}>
         <SelectTrigger className="h-8 w-[150px]">
           <SelectValue placeholder="Set response…" />
@@ -850,6 +866,81 @@ function TableView({
   )
 }
 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+/**
+ * Props that make a `PaginationPrevious`/`PaginationNext` unusable at a boundary.
+ *
+ * Those render an `<a>`, which has no `disabled`: the component is built for
+ * href-based paging, while this register drives state from `onClick`. Kept here
+ * rather than patched into `components/ui/pagination.tsx` so that file stays a
+ * verbatim copy of upstream.
+ */
+function boundaryProps(atBoundary: boolean) {
+  return atBoundary
+    ? {
+        'aria-disabled': true,
+        tabIndex: -1,
+        className: 'pointer-events-none opacity-50',
+      }
+    : {}
+}
+
+function RegisterPagination({
+  page,
+  pageCount,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number
+  pageCount: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm text-muted-foreground whitespace-nowrap">Per page:</Label>
+        <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+          <SelectTrigger className="h-8 w-[80px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RISK_PAGE_SIZES.map((size) => (
+              <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Pagination className="mx-0 w-auto justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              href="#"
+              onClick={(e) => { e.preventDefault(); onPageChange(page - 1) }}
+              {...boundaryProps(page <= 1)}
+            />
+          </PaginationItem>
+          <PaginationItem>
+            <span className="px-3 text-sm text-muted-foreground tabular-nums">
+              Page {page} of {pageCount}
+            </span>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationNext
+              href="#"
+              onClick={(e) => { e.preventDefault(); onPageChange(page + 1) }}
+              {...boundaryProps(page >= pageCount)}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function RiskAnalysisTab({
@@ -863,14 +954,38 @@ export function RiskAnalysisTab({
   const [selectedRiskId, setSelectedRiskId] = useState<number | null>(null)
   const [deleteRiskId, setDeleteRiskId] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_RISK_PAGE_SIZE)
 
-  const { data: risks, isLoading } = useRisks(threatModelId)
+  const { data: riskPage, isLoading } = useRisks(threatModelId, { page, pageSize })
   const { data: scoringMethods } = useScoringMethods()
   const deleteRisk = useDeleteRisk(threatModelId)
   const recalculateRisk = useRecalculateRisk(threatModelId)
 
+  // `risks` is one page; `totalRisks` is the register. Everything the user can
+  // act on — select, bulk-update, drag between board columns — is scoped to the
+  // page, because that is all the client has.
+  const risks = riskPage?.results
+  const totalRisks = riskPage?.count ?? 0
+  const pageCount = Math.max(1, Math.ceil(totalRisks / pageSize))
+  const firstRowNumber = (page - 1) * pageSize + 1
+  const lastRowNumber = firstRowNumber + (risks?.length ?? 0) - 1
+
   const selectedRisk = risks?.find((r) => r.id === selectedRiskId)
   const activeScoringMethod = scoringMethods?.find((m) => m.key === riskScoringMethod)
+
+  // Selection can only refer to rows that are loaded, so leaving the page drops
+  // it rather than silently carrying ids the user can no longer see.
+  const goToPage = (next: number) => {
+    setPage(next)
+    setSelectedIds([])
+    setSelectedRiskId(null)
+  }
+
+  const changePageSize = (next: number) => {
+    setPageSize(next)
+    goToPage(1)
+  }
 
   const handleDelete = () => {
     if (deleteRiskId === null) return
@@ -879,6 +994,10 @@ export function RiskAnalysisTab({
         setDeleteRiskId(null)
         if (selectedRiskId === deleteRiskId) setSelectedRiskId(null)
         setSelectedIds((prev) => prev.filter((id) => id !== deleteRiskId))
+        // Deleting a page's last row leaves `page` past the end. DRF answers an
+        // out-of-range page with a 404 rather than an empty one, so step back
+        // before the refetch asks for it.
+        if (page > 1 && risks?.length === 1) goToPage(page - 1)
       },
     })
   }
@@ -907,7 +1026,8 @@ export function RiskAnalysisTab({
         <div>
           <h2 className="text-lg font-semibold">Risk Register</h2>
           <p className="text-sm text-muted-foreground">
-            {risks?.length ?? 0} risk{(risks?.length ?? 0) !== 1 ? 's' : ''}
+            {totalRisks} risk{totalRisks !== 1 ? 's' : ''}
+            {pageCount > 1 && ` — showing ${firstRowNumber}–${lastRowNumber}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -959,7 +1079,17 @@ export function RiskAnalysisTab({
           selectedIds={selectedIds}
           threatModelId={threatModelId}
           onClear={() => setSelectedIds([])}
+          isPaginated={pageCount > 1}
         />
+      )}
+
+      {/* An empty column does not mean no risks carry that response — they may
+          be on another page. Nothing on the board itself shows that. */}
+      {viewMode === 'kanban' && pageCount > 1 && (
+        <p className="text-sm text-muted-foreground">
+          Board shows risks {firstRowNumber}–{lastRowNumber} of {totalRisks}. Column counts
+          are for this page — raise the page size to see more of the register at once.
+        </p>
       )}
 
       {/* Empty state */}
@@ -976,6 +1106,7 @@ export function RiskAnalysisTab({
           </div>
         </Card>
       ) : (
+        <>
         <div className="flex gap-6">
           {/* Main content */}
           <div className={`flex-1 min-w-0 ${selectedRisk && viewMode === 'table' ? 'max-w-[60%]' : ''}`}>
@@ -1013,6 +1144,19 @@ export function RiskAnalysisTab({
             </div>
           )}
         </div>
+
+        {/* Kept visible at one page too, once the size has been changed, so the
+            control that got the user there can also take them back. */}
+        {(pageCount > 1 || pageSize !== DEFAULT_RISK_PAGE_SIZE) && (
+          <RegisterPagination
+            page={page}
+            pageCount={pageCount}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
+          />
+        )}
+        </>
       )}
 
       {/* Detail panel for kanban (below board) */}

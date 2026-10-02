@@ -1,15 +1,28 @@
-import { useState, useCallback, useMemo } from 'react'
-import { User, Server, Cog, Database, Shield, Box, StickyNote, ChevronRight, ChevronDown, Search, X, Package } from 'lucide-react'
+import { Fragment, useState, useCallback, useMemo } from 'react'
+import type { XYPosition } from '@xyflow/react'
+import { User, Server, Cog, Database, Shield, Box, StickyNote, Table, ChevronRight, ChevronDown, Search, X, Package, ShieldCheck, ArrowUp } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import type { DiagramNodeType } from '../../types'
+import type { DFDNotationStyle } from '../../types/notation'
 import { useGroupedComponentLibrary, categoryToNodeType } from '../../api/component-library'
 import type { ComponentLibraryItem } from '../../api/component-library'
+import { useCreateNode, type CreateNodeOptions } from '../../hooks/useCreateNode'
+import { SvgIcon } from '../SvgIcon'
+import { TableGridPicker } from './TableGridPicker'
 
 interface ComponentPanelProps {
   threatModelId?: string
   onClose: () => void
+  connectionMode?: boolean
+  onConnectionModeChange?: (enabled: boolean) => void
+  boundaryMode?: boolean
+  onBoundaryModeChange?: (enabled: boolean) => void
+  getCanvasCenterPosition?: () => XYPosition
+  notationStyle?: DFDNotationStyle
 }
 
 interface DfdTypeItem {
@@ -27,6 +40,7 @@ const dfdTypes: DfdTypeItem[] = [
   { type: 'trustZone', label: 'Trust Zone', icon: Shield, color: 'text-orange-600' },
   { type: 'systemScope', label: 'System Scope', icon: Box, color: 'text-gray-600' },
   { type: 'stickyNote', label: 'Sticky Note', icon: StickyNote, color: 'text-amber-700' },
+  { type: 'table', label: 'Table', icon: Table, color: 'text-sky-700' },
 ]
 
 const categoryIcons: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
@@ -78,15 +92,30 @@ function CollapsibleSection({
   )
 }
 
-export function ComponentPanel({ threatModelId, onClose }: ComponentPanelProps) {
+export function ComponentPanel({
+  threatModelId,
+  onClose,
+  connectionMode = false,
+  onConnectionModeChange,
+  boundaryMode = false,
+  onBoundaryModeChange,
+  getCanvasCenterPosition,
+  notationStyle = 'dfd3',
+}: ComponentPanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [tablePickerOpen, setTablePickerOpen] = useState(false)
   const { groups, isLoading } = useGroupedComponentLibrary(threatModelId)
+  const { createNode } = useCreateNode(notationStyle)
   const normalizedQuery = searchQuery.toLowerCase().trim()
+  const showLibrary = !!threatModelId
 
   const filteredDfdTypes = useMemo(() => {
     if (!normalizedQuery) return dfdTypes
     return dfdTypes.filter((item) => item.label.toLowerCase().includes(normalizedQuery))
   }, [normalizedQuery])
+
+  const showTrustBoundary = !normalizedQuery || 'trust boundary'.includes(normalizedQuery)
+  const showFlow = !normalizedQuery || 'flow'.includes(normalizedQuery)
 
   const filteredGroups = useMemo(() => {
     if (!normalizedQuery) return groups
@@ -103,6 +132,15 @@ export function ComponentPanel({ threatModelId, onClose }: ComponentPanelProps) 
 
   const handleClearSearch = useCallback(() => setSearchQuery(''), [])
 
+  const handleClickToPlace = useCallback(
+    (type: DiagramNodeType, options?: CreateNodeOptions) => {
+      if (!getCanvasCenterPosition) return
+      const center = getCanvasCenterPosition()
+      createNode(type, center, options)
+    },
+    [createNode, getCanvasCenterPosition]
+  )
+
   return (
     <div className="w-64 bg-background border-r h-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b">
@@ -112,50 +150,97 @@ export function ComponentPanel({ threatModelId, onClose }: ComponentPanelProps) 
         </Button>
       </div>
 
-      <div className="px-3 py-2">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search components..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-7 h-8 text-sm"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              onClick={handleClearSearch}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
+      {showLibrary && (
+        <div className="px-3 py-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search components..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-7 h-8 text-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={handleClearSearch}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="pb-4">
-          {filteredDfdTypes.length > 0 && (
+          {(filteredDfdTypes.length > 0 || showTrustBoundary || showFlow) && (
             <CollapsibleSection title="Threat Modeling" icon={<Shield className="h-3 w-3" />}>
-              {filteredDfdTypes.map((item) => (
+              {filteredDfdTypes.map((item) => {
+                const row = (
+                  <div
+                    draggable
+                    onDragStart={(e) => handleDfdTypeDragStart(e, item.type)}
+                    onClick={item.type === 'table' ? undefined : () => handleClickToPlace(item.type)}
+                    className="flex items-center gap-2 px-4 py-1.5 cursor-grab active:cursor-grabbing hover:bg-muted/50 text-sm select-none"
+                  >
+                    <item.icon className={`h-4 w-4 flex-shrink-0 ${item.color}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                )
+
+                // A table's size is chosen before it exists, so clicking opens a
+                // picker rather than placing immediately. Dragging still drops a
+                // default-sized table — a drag has nowhere to put the choice.
+                if (item.type !== 'table') return <Fragment key={item.type}>{row}</Fragment>
+
+                return (
+                  <Popover key={item.type} open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+                    <PopoverTrigger asChild>{row}</PopoverTrigger>
+                    <PopoverContent side="right" align="start" className="w-auto">
+                      <TableGridPicker
+                        onPick={(size) => {
+                          setTablePickerOpen(false)
+                          handleClickToPlace('table', { tableSize: size })
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )
+              })}
+              {showTrustBoundary && onBoundaryModeChange && (
                 <div
-                  key={item.type}
-                  draggable
-                  onDragStart={(e) => handleDfdTypeDragStart(e, item.type)}
-                  className="flex items-center gap-2 px-4 py-1.5 cursor-grab active:cursor-grabbing hover:bg-muted/50 text-sm select-none"
+                  onClick={() => onBoundaryModeChange(!boundaryMode)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-1.5 cursor-pointer text-sm select-none',
+                    boundaryMode ? 'bg-primary text-primary-foreground' : 'text-amber-700 hover:bg-muted/50'
+                  )}
                 >
-                  <item.icon className={`h-4 w-4 flex-shrink-0 ${item.color}`} />
-                  <span className="truncate">{item.label}</span>
+                  <ShieldCheck className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Trust Boundary</span>
                 </div>
-              ))}
+              )}
+              {showFlow && onConnectionModeChange && (
+                <div
+                  onClick={() => onConnectionModeChange(!connectionMode)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-1.5 cursor-pointer text-sm select-none',
+                    connectionMode ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50'
+                  )}
+                >
+                  <ArrowUp className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Flow</span>
+                </div>
+              )}
             </CollapsibleSection>
           )}
 
-          {isLoading && (
+          {showLibrary && isLoading && (
             <div className="px-4 py-3 text-xs text-muted-foreground">Loading libraries...</div>
           )}
 
-          {filteredGroups.map((group) => (
+          {showLibrary && filteredGroups.map((group) => (
             <CollapsibleSection
               key={group.packSlug}
               title={group.packName}
@@ -175,10 +260,7 @@ export function ComponentPanel({ threatModelId, onClose }: ComponentPanelProps) 
                     className="flex items-center gap-2 px-4 py-1.5 cursor-grab active:cursor-grabbing hover:bg-muted/50 text-sm select-none"
                   >
                     {item.iconSvg ? (
-                      <span
-                        className="h-4 w-4 flex-shrink-0 [&>svg]:h-full [&>svg]:w-full"
-                        dangerouslySetInnerHTML={{ __html: item.iconSvg }}
-                      />
+                      <SvgIcon svg={item.iconSvg} className="h-4 w-4 flex-shrink-0" />
                     ) : (
                       <FallbackIcon className={`h-4 w-4 flex-shrink-0 ${iconColor}`} />
                     )}
@@ -189,7 +271,7 @@ export function ComponentPanel({ threatModelId, onClose }: ComponentPanelProps) 
             </CollapsibleSection>
           ))}
 
-          {!isLoading && groups.length === 0 && (
+          {showLibrary && !isLoading && groups.length === 0 && (
             <div className="px-4 py-3 text-xs text-muted-foreground">
               Connect component packs in Libraries to see components here.
             </div>

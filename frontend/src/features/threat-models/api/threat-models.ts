@@ -388,7 +388,7 @@ export async function exportCycloneDx(threatModelId: string): Promise<void> {
   const blob = await response.blob()
   const contentDisposition = response.headers.get('Content-Disposition')
   const filenameMatch = contentDisposition?.match(/filename="(.+)"/)
-  const filename = filenameMatch?.[1] || 'threat-model-cyclonedx.json'
+  const filename = filenameMatch?.[1] || 'threat-model-cyclonedx.cdx.json'
 
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')

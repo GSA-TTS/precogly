@@ -321,6 +321,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
     def _compute_completion_status(self, instance):
         """Compute enhanced completion status with system definition, coverage, and quality signals."""
         from apps.threats.models import (
+            ACTIVE_TRIAGE_STATUSES,
             ComponentInstanceThreat,
             DataFlowInstanceThreat,
             InstanceCountermeasure,
@@ -368,10 +369,10 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
         ]
 
         # --- Coverage ---
-        # Components with >= 1 non-dismissed threat
+        # Components with >= 1 active threat
         components_with_threats = (
             ComponentInstanceThreat.objects.filter(
-                component_id__in=component_ids, is_dismissed=False
+                component_id__in=component_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
             )
             .values("component_id")
             .distinct()
@@ -380,10 +381,10 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
             else 0
         )
 
-        # Flows with >= 1 non-dismissed threat
+        # Flows with >= 1 active threat
         flows_with_threats = (
             DataFlowInstanceThreat.objects.filter(
-                data_flow_id__in=dataflow_ids, is_dismissed=False
+                data_flow_id__in=dataflow_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
             )
             .values("data_flow_id")
             .distinct()
@@ -392,17 +393,17 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
             else 0
         )
 
-        # Total non-dismissed threats (for countermeasure coverage)
+        # Total active threats (for countermeasure coverage)
         component_threat_count = (
             ComponentInstanceThreat.objects.filter(
-                component_id__in=component_ids, is_dismissed=False
+                component_id__in=component_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
             ).count()
             if component_ids
             else 0
         )
         flow_threat_count = (
             DataFlowInstanceThreat.objects.filter(
-                data_flow_id__in=dataflow_ids, is_dismissed=False
+                data_flow_id__in=dataflow_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
             ).count()
             if dataflow_ids
             else 0
@@ -413,7 +414,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
         component_threats_with_cm = (
             ComponentInstanceThreat.objects.filter(
                 component_id__in=component_ids,
-                is_dismissed=False,
+                triage_status__in=ACTIVE_TRIAGE_STATUSES,
                 countermeasure_links__isnull=False,
             )
             .distinct()
@@ -424,7 +425,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
         flow_threats_with_cm = (
             DataFlowInstanceThreat.objects.filter(
                 data_flow_id__in=dataflow_ids,
-                is_dismissed=False,
+                triage_status__in=ACTIVE_TRIAGE_STATUSES,
                 countermeasure_links__isnull=False,
             )
             .distinct()
@@ -494,6 +495,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
         """Compute quality signals by cross-checking entries against installed library packs."""
         from apps.systems.models import OrgsystemComponent
         from apps.threats.models import (
+            ACTIVE_TRIAGE_STATUSES,
             ComponentInstanceThreat,
             ComponentLibraryThreat,
             CountermeasureLibrary,
@@ -560,7 +562,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
 
         # Check component threats
         component_threats = ComponentInstanceThreat.objects.filter(
-            component_id__in=component_ids, is_dismissed=False
+            component_id__in=component_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
         ).select_related("component__component_library", "threat_library")
 
         for ct in component_threats:
@@ -597,7 +599,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
         # Check flow threats — a flow threat is valid if EITHER endpoint's
         # component library has the mapping (since flows connect two components)
         flow_threats = DataFlowInstanceThreat.objects.filter(
-            data_flow_id__in=dataflow_ids, is_dismissed=False
+            data_flow_id__in=dataflow_ids, triage_status__in=ACTIVE_TRIAGE_STATUSES
         ).select_related(
             "data_flow__source_component__component_library",
             "data_flow__dest_component__component_library",

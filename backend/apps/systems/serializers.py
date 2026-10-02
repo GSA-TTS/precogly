@@ -152,6 +152,7 @@ class ComponentLibrarySerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "qualified_slug",
+            "icon_svg",
             "created_at",
             "updated_at",
             "source_pack_name",

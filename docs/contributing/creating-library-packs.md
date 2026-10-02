@@ -35,7 +35,7 @@ Your pack type determines which files you need to create.
 | `full` | Everything | `pack.yaml`, `components.yaml`, `threats.yaml`, `countermeasures.yaml`, `joins/` | `dfd-templates/`, compliance overlays |
 | `compliance` | Framework definitions | `pack.yaml` with `frameworks:` block (uses `slug`, not `id`) | None |
 | `taxonomy` | Classification entries | `pack.yaml` with `taxonomies:` block (uses `slug`, not `id`) | None |
-| `template` | DFD templates only | `pack.yaml`, `dfd-templates/` | None |
+| `template` | DFD templates or worksheets only | `pack.yaml`, `dfd-templates/` | None |
 
 Most community contributions will be `technology` packs (adding components for a new cloud provider or tool) or `full` packs (components with threats and countermeasures).
 
@@ -137,7 +137,9 @@ countermeasures:
     description: |
       Enable S3 Block Public Access settings at account and bucket level.
       Prevents accidental public exposure.
-    control_type: preventive
+    control_functions:
+      - preventive
+    control_nature: technical
     cost: low
 ```
 
@@ -187,7 +189,8 @@ Use these conventions:
 - All IDs: lowercase with hyphens (e.g., "s3-public-exposure")
 - Threat descriptions: explain what the threat is and how it occurs
 - Countermeasure descriptions: explain what the control does and how it helps
-- control_type: preventive, detective, corrective, deterrent, recovery, compensating, or procedural
+- control_functions: list of preventive, detective, corrective, deterrent, recovery, compensating
+- control_nature: technical, administrative, or physical
 - cost: low, medium, or high
 - applies_to in component-threat joins: "component", "flow", or "both"
 
@@ -250,7 +253,8 @@ LLM-generated content needs careful human review. Check each area:
 - [ ] All IDs follow the `lowercase-hyphen` pattern
 - [ ] IDs referenced in join files match IDs defined in their respective files
 - [ ] No duplicate IDs within any file
-- [ ] `control_type` and `cost` values use only allowed values
+- [ ] `control_functions` and `control_nature` values use only allowed values
+- [ ] `cost` values use only allowed values
 - [ ] `applies_to` uses only `component`, `flow`, or `both`
 
 ### Quality
@@ -293,7 +297,8 @@ This endpoint requires **Security Team** role. It checks structural issues (meta
 |---|---|---|
 | Framework uses `id` instead of `slug` | "Framework uses 'id' instead of 'slug'" | Rename `id:` to `slug:` in the frameworks section of pack.yaml |
 | Taxonomy uses `id` instead of `slug` | "Taxonomy uses 'id' instead of 'slug'" | Rename `id:` to `slug:` in taxonomy.yaml |
-| Invalid `control_type` | "Unknown control_type" | Use `preventive`, `detective`, `corrective`, `deterrent`, `recovery`, `compensating`, or `procedural` |
+| Invalid `control_functions` | "Unknown control function" | Use `preventive`, `detective`, `corrective`, `deterrent`, `recovery`, or `compensating` |
+| Invalid `control_nature` | "Unknown control_nature" | Use `technical`, `administrative`, or `physical` |
 | Invalid `cost` | "Unknown cost" | Use `low`, `medium`, or `high` |
 | Invalid `category` | "Unknown category" | Use `process`, `datastore`, `external_human_actor`, or `external_system_actor` |
 | Missing `pack_type` | "Missing required field: pack_type" | Add `pack_type` to the `pack:` section |
@@ -310,7 +315,7 @@ This endpoint requires **Security Team** role. It checks structural issues (meta
 5. Verify:
     - Components appear with correct names, categories, and descriptions
     - Threats show with their taxonomy tags (STRIDE, CWE, etc.)
-    - Countermeasures show with correct control types and cost levels
+    - Countermeasures show with correct control functions, control nature, and cost levels
     - Compliance mappings appear if you included them
 6. Click **Import**. Validation runs automatically. Fix any reported issues.
 7. Verify the pack imports successfully (success toast appears).

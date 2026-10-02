@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.core.permissions import CanWrite, IsSecurityTeam
+from apps.core.permissions import CanWrite
 from apps.threats.models import (
     ComponentInstanceThreat,
 )
@@ -114,11 +114,11 @@ class TrustBoundaryViewSet(viewsets.ModelViewSet):
         return TrustBoundary.objects.filter(organization_id__in=org_ids)
 
 
-class ComponentLibraryViewSet(viewsets.ModelViewSet):
+class ComponentLibraryViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for ComponentLibrary (shared component templates)."""
 
     serializer_class = ComponentLibrarySerializer
-    permission_classes = [IsAuthenticated, IsSecurityTeam]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["category", "component_type", "provider"]

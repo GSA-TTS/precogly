@@ -138,6 +138,7 @@ export interface CycloneDxScenario {
   threat: string
   affectedAssets?: string[]
   riskScore?: CycloneDxRiskScore
+  properties?: CycloneDxProperty[]
 }
 
 export interface CycloneDxRiskScore {

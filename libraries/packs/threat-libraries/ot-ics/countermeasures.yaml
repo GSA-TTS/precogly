@@ -9,7 +9,7 @@ countermeasures:
       Architecture (ISA-95/IEC 62443 zones and conduits). Separate Level 0-1
       (field devices, controllers) from Level 2 (supervisory), Level 3 (operations),
       and Level 4-5 (enterprise) with firewalls at each boundary.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: industrial-dmz
@@ -19,7 +19,7 @@ countermeasures:
       broker all cross-boundary data transfers. Use data diodes, jump servers,
       and application-level gateways to prevent direct connectivity between
       enterprise and control system networks.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: deep-packet-inspection
@@ -29,7 +29,7 @@ countermeasures:
       protocols (Modbus, DNP3, EtherNet/IP, OPC UA). Enforce protocol allowlisting,
       validate function codes, and block unauthorized read/write operations
       at the application layer.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: network-monitoring
@@ -39,7 +39,7 @@ countermeasures:
       anomalous traffic patterns, unauthorized devices, and suspicious commands.
       Solutions such as Claroty, Nozomi Networks, or Dragos provide asset
       discovery and threat detection without impacting control traffic.
-    control_type: detective
+    control_functions: [detective]
     cost: high
 
   # ============================================================================
@@ -52,7 +52,7 @@ countermeasures:
       HMI, engineering workstations, and historian. Define roles for operators,
       engineers, maintenance, and administrators with least-privilege permissions
       appropriate to each function.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: mfa-remote-access
@@ -62,7 +62,7 @@ countermeasures:
       and systems. Apply to VPN connections, jump server access, and vendor
       remote support sessions. Combine with session recording and time-limited
       access windows.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: physical-access-control
@@ -72,7 +72,7 @@ countermeasures:
       server rooms, and wiring closets. Include key-card access, surveillance
       cameras, visitor logging, and tamper-evident enclosures for critical
       equipment.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: secure-remote-access
@@ -82,7 +82,7 @@ countermeasures:
       approval workflows, and time-limited access. Route all remote sessions
       through a jump server in the industrial DMZ with full audit logging.
       Never allow direct RDP or VPN into the control network.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   # ============================================================================
@@ -95,7 +95,7 @@ countermeasures:
       settings, programming passwords, access control lists, and CPU protection
       levels. Restrict programming access to authorized engineering workstations
       and require authentication for online changes.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: firmware-validation
@@ -105,7 +105,7 @@ countermeasures:
       embedded devices. Verify firmware checksums against vendor-published
       values before and after updates. Maintain a firmware baseline inventory
       and alert on unauthorized changes.
-    control_type: detective
+    control_functions: [detective]
     cost: medium
 
   - id: change-management
@@ -115,7 +115,8 @@ countermeasures:
       for all control system modifications including logic changes, configuration
       updates, firmware upgrades, and network changes. Require peer review,
       testing, and approval before deployment.
-    control_type: procedural
+    control_functions: [preventive]
+    control_nature: administrative
     cost: low
 
   - id: configuration-backup
@@ -125,7 +126,7 @@ countermeasures:
       including PLC programs, DCS projects, HMI screens, historian settings,
       and network device configurations. Store backups offline with versioning
       and test restoration procedures periodically.
-    control_type: corrective
+    control_functions: [corrective]
     cost: low
 
   # ============================================================================
@@ -138,7 +139,7 @@ countermeasures:
       Security Mode SignAndEncrypt, DNP3 Secure Authentication, TLS-wrapped
       Modbus, or encrypted fieldbus variants. Prioritize critical communication
       paths and data containing process recipes or safety parameters.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: protocol-allowlisting
@@ -148,7 +149,7 @@ countermeasures:
       industrial protocols and function codes on each network segment.
       Block unnecessary protocols and restrict Modbus/DNP3 function codes
       to only those required for normal operation.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: command-authentication
@@ -158,7 +159,7 @@ countermeasures:
       Authentication, OPC UA certificates, or application-level signing.
       Ensures that commands originate from authorized sources and have
       not been modified in transit.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   # ============================================================================
@@ -171,7 +172,7 @@ countermeasures:
       events into a security information and event management (SIEM) platform.
       Correlate IT and OT security events to detect multi-stage attacks that
       traverse network boundaries.
-    control_type: detective
+    control_functions: [detective]
     cost: high
 
   - id: ids-ips-ot
@@ -181,7 +182,7 @@ countermeasures:
       understand industrial protocols and can detect known ICS attack patterns,
       unauthorized programming commands, and anomalous network behavior without
       disrupting control traffic.
-    control_type: detective
+    control_functions: [detective]
     cost: high
 
   - id: process-anomaly-detection
@@ -191,7 +192,7 @@ countermeasures:
       anomalies that may indicate cyber-physical attacks. Compare real-time
       values against process models and historical baselines to detect
       manipulated sensor readings or unauthorized setpoint changes.
-    control_type: detective
+    control_functions: [detective]
     cost: medium
 
   - id: audit-logging
@@ -201,7 +202,7 @@ countermeasures:
       engineering workstations, and network devices. Log authentication events,
       configuration changes, control commands, and alarm acknowledgments with
       tamper-resistant storage.
-    control_type: detective
+    control_functions: [detective]
     cost: low
 
   # ============================================================================
@@ -214,7 +215,7 @@ countermeasures:
       Instrumented System (SIS) from the Basic Process Control System (BPCS)
       per IEC 61511. Use separate controllers, networks, sensors, and final
       elements. Never allow engineering access to SIS from the BPCS network.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: safety-integrity-verification
@@ -224,7 +225,7 @@ countermeasures:
       through proof testing, diagnostic coverage analysis, and common cause
       failure assessment per IEC 61511. Verify that cybersecurity controls
       do not degrade the achieved SIL.
-    control_type: detective
+    control_functions: [detective]
     cost: medium
 
   - id: emergency-procedures
@@ -234,7 +235,7 @@ countermeasures:
       incidents affecting industrial processes. Include manual override
       procedures, safe shutdown sequences, and communication protocols.
       Train operators on manual process control in case of control system loss.
-    control_type: corrective
+    control_functions: [corrective]
     cost: low
 
   # ============================================================================
@@ -247,7 +248,7 @@ countermeasures:
       their development practices, patch management, incident response,
       and supply chain controls. Include cybersecurity requirements in
       procurement specifications per IEC 62443-2-4.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: patch-management
@@ -257,7 +258,7 @@ countermeasures:
       prioritization, vendor compatibility testing, and scheduled maintenance
       windows. Address the reality that many OT systems cannot be patched
       promptly by implementing compensating controls for unpatched systems.
-    control_type: corrective
+    control_functions: [corrective]
     cost: medium
 
   - id: asset-inventory
@@ -267,5 +268,5 @@ countermeasures:
       controllers, network devices, software versions, firmware revisions,
       and communication paths. Use automated discovery tools to identify
       unknown or unauthorized devices on the control network.
-    control_type: detective
+    control_functions: [detective]
     cost: medium

@@ -104,6 +104,7 @@ Go back to the overview screen. The **Owners assigned** item in the completion c
 
 ## What's next?
 
+- [Generate a Threat Model with AI](../guides/ai-threat-model-generation.md) — use any AI assistant (ChatGPT, Claude, Gemini, etc.) to generate a complete threat model for your own system as a CycloneDX TM-BOM file, then import it into Precogly
 - [Roles and Permissions](../concepts/roles-and-permissions.md) — understand how teams, roles, and access control work
 - [DFD Editor](../concepts/dfd-editor.md) — learn more about the diagram editor's features
 - [Library Packs](../concepts/library-packs.md) — explore the curated threat and countermeasure packs

@@ -657,8 +657,10 @@ class MagicLinkAccessView(APIView):
         """
         threats = threat_analysis.get("threats", [])
 
-        # Filter out dismissed threats
-        active_threats = [t for t in threats if not t.get("is_dismissed")]
+        # Filter out triaged threats
+        active_threats = [
+            t for t in threats if t.get("triage_status", "open") in ("open", "mitigate")
+        ]
 
         # Derive threat statuses (mirrors frontend deriveThreatStatus)
         exposed_count = 0
@@ -919,7 +921,7 @@ class MagicLinkAccessView(APIView):
                 threat_name = threat.threat_name or (
                     threat.threat_library.name if threat.threat_library else None
                 )
-                threat_description = (
+                threat_description = threat.threat_description or (
                     threat.threat_library.description if threat.threat_library else None
                 )
                 taxonomy_entries = self._serialize_taxonomy_entries(threat)
@@ -942,7 +944,7 @@ class MagicLinkAccessView(APIView):
                     "residual_severity": threat.residual_severity,
                     "status": threat.status,
                     "severity_scoring_metadata": threat.severity_scoring_metadata,
-                    "is_dismissed": threat.is_dismissed,
+                    "triage_status": threat.triage_status,
                     "format_metadata": threat.format_metadata,
                     "countermeasures": [
                         {
@@ -960,11 +962,17 @@ class MagicLinkAccessView(APIView):
                                 if link.countermeasure.countermeasure_library
                                 else None
                             ),
-                            "control_type": link.countermeasure.control_type
+                            "control_functions": link.countermeasure.control_functions
                             or (
-                                link.countermeasure.countermeasure_library.control_type
+                                link.countermeasure.countermeasure_library.control_functions
                                 if link.countermeasure.countermeasure_library
-                                else None
+                                else []
+                            ),
+                            "control_nature": link.countermeasure.control_nature
+                            or (
+                                link.countermeasure.countermeasure_library.control_nature
+                                if link.countermeasure.countermeasure_library
+                                else ""
                             ),
                             "status": link.countermeasure.status,
                             "priority": link.countermeasure.priority,
@@ -1030,7 +1038,7 @@ class MagicLinkAccessView(APIView):
                 threat_name = threat.threat_name or (
                     threat.threat_library.name if threat.threat_library else None
                 )
-                threat_description = (
+                threat_description = threat.threat_description or (
                     threat.threat_library.description if threat.threat_library else None
                 )
                 taxonomy_entries = self._serialize_taxonomy_entries(threat)
@@ -1050,7 +1058,7 @@ class MagicLinkAccessView(APIView):
                     "inherent_severity": threat.inherent_severity,
                     "residual_severity": threat.residual_severity,
                     "status": threat.status,
-                    "is_dismissed": threat.is_dismissed,
+                    "triage_status": threat.triage_status,
                     "format_metadata": threat.format_metadata,
                     "countermeasures": [
                         {
@@ -1068,11 +1076,17 @@ class MagicLinkAccessView(APIView):
                                 if link.countermeasure.countermeasure_library
                                 else None
                             ),
-                            "control_type": link.countermeasure.control_type
+                            "control_functions": link.countermeasure.control_functions
                             or (
-                                link.countermeasure.countermeasure_library.control_type
+                                link.countermeasure.countermeasure_library.control_functions
                                 if link.countermeasure.countermeasure_library
-                                else None
+                                else []
+                            ),
+                            "control_nature": link.countermeasure.control_nature
+                            or (
+                                link.countermeasure.countermeasure_library.control_nature
+                                if link.countermeasure.countermeasure_library
+                                else ""
                             ),
                             "status": link.countermeasure.status,
                             "priority": link.countermeasure.priority,

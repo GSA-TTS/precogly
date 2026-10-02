@@ -27,6 +27,7 @@ import {
   Info,
 } from 'lucide-react'
 import { type TaxonomyEntry } from '@/types/domain'
+import { isActiveThreat } from '@/types/triage'
 import { TaxonomyBadges } from '@/components/shared/TaxonomyBadges'
 import type { ComponentThreat, ComponentThreatCountermeasure } from '@/features/dfd-editor/types/threat-analysis'
 import type { DiagramNode } from '@/features/dfd-editor/types'
@@ -76,7 +77,7 @@ function convertSharedThreatToComponentThreat(sharedThreat: SharedThreat): Compo
     sourceDiagramTitle: sharedThreat.dfdName || 'Unknown Diagram',
     componentId,
     threatId: sharedThreat.threatLibraryId?.toString() || 'custom',
-    dismissed: sharedThreat.isDismissed,
+    triageStatus: (sharedThreat.triageStatus as 'open' | 'accept' | 'mitigate' | 'delegate' | 'eliminate') || 'open',
     createdAt: timestamp,
     updatedAt: timestamp,
     threatName: sharedThreat.threatName || 'Unknown Threat',
@@ -91,6 +92,8 @@ function convertSharedThreatToComponentThreat(sharedThreat: SharedThreat): Compo
       updatedAt: timestamp,
       countermeasureName: cm.countermeasureName || 'Unknown Countermeasure',
       countermeasureDescription: cm.countermeasureDescription || '',
+      controlFunctions: cm.controlFunctions || [],
+      controlNature: cm.controlNature || '',
       owner: cm.assignedOwnerEmail || undefined,
     })),
   }
@@ -296,9 +299,9 @@ export function ReadOnlyThreatAnalysisView({
     return safeDiagrams.map((d) => ({ id: String(d.id), name: d.name }))
   }, [threatAnalysisData, safeDiagrams])
 
-  // Filter threats by DFD (exclude dismissed)
+  // Filter threats by DFD (exclude triaged)
   const filteredThreats = useMemo(() => {
-    const activeThreats = allThreats.filter((t) => !t.dismissed)
+    const activeThreats = allThreats.filter((t) => isActiveThreat(t.triageStatus))
     if (!filterDfd) return activeThreats
     return activeThreats.filter((t) => t.sourceDiagramId === filterDfd || t.diagramId === filterDfd)
   }, [allThreats, filterDfd])

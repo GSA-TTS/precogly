@@ -427,13 +427,27 @@ class DFDTemplatesLibraryViewSet(viewsets.ReadOnlyModelViewSet):
         qs = DFDTemplatesLibrary.objects.all().select_related("source_pack")
         threat_model_id = self.request.query_params.get("threat_model")
         if threat_model_id:
+            from apps.packs.models import LibraryPack
             from apps.threat_models.models import ThreatModelLibraryPack
 
             connected_pack_ids = ThreatModelLibraryPack.objects.filter(
                 threat_model_id=threat_model_id
             ).values_list("library_pack_id", flat=True)
+
+            # A template is gated on its pack being connected so that the
+            # `component_ref`s in it resolve: the `resolved` action below turns
+            # them into component_library ids, and inserting an AWS template
+            # without the AWS pack yields components that point at nothing.
+            #
+            # A template pack ships no components at all — it is worksheets, not
+            # a technology domain — so nothing in its templates can fail to
+            # resolve and there is nothing for a connection to supply. Gating
+            # those too would make a facilitator connect a STRIDE worksheet to
+            # their threat model as though it described their stack.
             qs = qs.filter(
-                Q(source_pack_id__in=connected_pack_ids) | Q(source_pack__isnull=True)
+                Q(source_pack_id__in=connected_pack_ids)
+                | Q(source_pack__isnull=True)
+                | Q(source_pack__pack_type=LibraryPack.PackType.TEMPLATE)
             )
         return qs
 

@@ -1,9 +1,9 @@
 """Service functions for risk computation and recalculation."""
 
 from .models import (
+    ACTIVE_TRIAGE_STATUSES,
     ComponentInstanceThreat,
     CountermeasureThreatLink,
-    DataFlowInstanceThreat,
     InstanceCountermeasure,
     Risk,
     RiskThreat,
@@ -29,9 +29,7 @@ def get_countermeasures_for_threat(threat):
             threat_links__component_threat=threat
         )
     else:
-        return InstanceCountermeasure.objects.filter(
-            threat_links__flow_threat=threat
-        )
+        return InstanceCountermeasure.objects.filter(threat_links__flow_threat=threat)
 
 
 def recalculate_threat_status(instance_threat):
@@ -54,7 +52,10 @@ def recalculate_threat_status(instance_threat):
 
         if has_gaps:
             new_status = "exposed"
-        elif any(s in ("planned", "waived", "in_progress", "decommissioned") for s in statuses):
+        elif any(
+            s in ("planned", "waived", "in_progress", "decommissioned")
+            for s in statuses
+        ):
             new_status = "addressable"
         else:
             new_status = "mitigated"
@@ -81,7 +82,7 @@ def derive_risk_status(risk):
     all_threat_statuses = []
     for risk_threat in risk_threats:
         threat = risk_threat.component_threat or risk_threat.flow_threat
-        if threat and not threat.is_dismissed:
+        if threat and threat.triage_status in ACTIVE_TRIAGE_STATUSES:
             all_threat_statuses.append(threat.status)
 
     if not all_threat_statuses:
@@ -109,7 +110,7 @@ def compute_residual_score(risk):
 
     for risk_threat in risk.risk_threats.all():
         threat = risk_threat.component_threat or risk_threat.flow_threat
-        if not threat or threat.is_dismissed:
+        if not threat or threat.triage_status not in ACTIVE_TRIAGE_STATUSES:
             continue
         for countermeasure in get_countermeasures_for_threat(threat):
             if countermeasure.id in seen_countermeasure_ids:
@@ -154,7 +155,9 @@ def calculate_inherent_score(scoring_method, scoring_metadata):
 def recalculate_risk(risk):
     """Recompute residual_score and residual_level, save to DB."""
     residual_score = compute_residual_score(risk)
-    residual_level = score_to_level(residual_score) if residual_score is not None else ""
+    residual_level = (
+        score_to_level(residual_score) if residual_score is not None else ""
+    )
 
     Risk.objects.filter(pk=risk.pk).update(
         residual_score=residual_score,
@@ -169,9 +172,9 @@ def recalculate_risks_for_threat(threat_instance, threat_type="component"):
             component_threat=threat_instance
         ).values_list("risk_id", flat=True)
     else:
-        risk_ids = RiskThreat.objects.filter(
-            flow_threat=threat_instance
-        ).values_list("risk_id", flat=True)
+        risk_ids = RiskThreat.objects.filter(flow_threat=threat_instance).values_list(
+            "risk_id", flat=True
+        )
 
     for risk in Risk.objects.filter(id__in=risk_ids):
         recalculate_risk(risk)

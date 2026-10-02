@@ -62,7 +62,6 @@ export interface PackDependencyCheck {
 
 export interface PackFilters {
   category?: string
-  tag?: string
   search?: string
 }
 

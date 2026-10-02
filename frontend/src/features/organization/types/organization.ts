@@ -190,7 +190,8 @@ export interface SharedCountermeasure {
   countermeasureLibraryId: number | null
   countermeasureName: string | null
   countermeasureDescription: string | null
-  controlType: string | null
+  controlFunctions: string[] | null
+  controlNature: string | null
   status: 'gap' | 'planned' | 'verified' | 'waived' | 'platform'
   evidenceUrl: string
   assignedOwnerEmail: string | null
@@ -220,7 +221,7 @@ export interface SharedThreat {
   residualSeverity: string
   status: 'open' | 'mitigated' | 'accepted'
   severityScoringMetadata?: Record<string, unknown>
-  isDismissed: boolean
+  triageStatus: string
   countermeasures: SharedCountermeasure[]
 }
 

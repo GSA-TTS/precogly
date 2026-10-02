@@ -13,6 +13,7 @@ A pack can contain any combination of:
 - **Compliance mappings** — links from countermeasures to standards like NIST CSF, ASVS, SOC 2, PCI-DSS
 - **Cross-framework requirement mappings** — links between requirements in different standards (e.g., IEC 81001 to FDA Premarket)
 - **DFD templates** — pre-built Data Flow Diagrams with components already wired up
+- **Worksheets** — canvas templates for facilitating threat modeling sessions (e.g., STRIDE per Interaction grids)
 
 When you add a component from a library pack to your threat model, its associated threats and countermeasures come with it — along with all taxonomy and compliance links.
 
@@ -26,11 +27,11 @@ When you add a component from a library pack to your threat model, its associate
 | `full`       | Components + threats + countermeasures + joins + templates | `aws`                           |
 | `compliance` | Framework definitions with requirements                    | `nist-csf`, `pci-dss`           |
 | `taxonomy`   | External threat classification taxonomies                  | `stride-taxonomy`, `capec` |
-| `template`   | DFD templates only                                         | —                               |
+| `template`   | DFD templates or worksheets only                           | `stride-worksheets`             |
 
 ## YAML structure
 
-Every pack is a directory under `libraries/packs/`, organized by category (`taxonomies/`, `standards/`, `threat-libraries/`). Only `pack.yaml` is required — other files depend on the pack type.
+Every pack is a directory under `libraries/packs/`, organized by category (`taxonomies/`, `standards/`, `threat-libraries/`, `worksheets/`). Only `pack.yaml` is required — other files depend on the pack type.
 
 ```
 threat-libraries/aws/
@@ -84,7 +85,7 @@ Here's how the YAML maps to what you see in the UI when previewing a pack:
 
 ![Pack preview — Threats with taxonomy tags](../assets/images/library-packs-preview-threats.png)
 
-![Pack preview — Countermeasures with control type and cost](../assets/images/library-packs-preview-countermeasures.png)
+![Pack preview — Countermeasures with control functions, control nature, and cost](../assets/images/library-packs-preview-countermeasures.png)
 
 ![Pack preview — Compliance framework requirements](../assets/images/library-packs-preview-compliance-mappings.png)
 
@@ -121,8 +122,10 @@ countermeasures:
     name: S3 Block Public Access
     description: |
       Enable S3 Block Public Access at account and bucket level.
-    control_type: preventive # preventive | detective | corrective | deterrent | recovery | compensating | procedural
-    cost: low # low | medium | high
+    control_functions:        # list: preventive | detective | corrective | deterrent | recovery | compensating
+      - preventive
+    control_nature: technical # technical | administrative | physical
+    cost: low                 # low | medium | high
 ```
 
 ### Join files

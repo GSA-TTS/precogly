@@ -320,20 +320,20 @@ async def test_nothing_matching_is_not_an_empty_catalog(
     assert answer["catalogSize"] == len(COUNTERMEASURE_LIBRARY_ROWS) > 0
 
 
-async def test_countermeasure_search_narrows_by_control_type_and_cost(
+async def test_countermeasure_search_narrows_by_control_function_and_cost(
     patched_server_http: Callable[[Handler], None], token: str
 ) -> None:
     patched_server_http(json_response(200, COUNTERMEASURE_LIBRARY_ROWS))
 
     async with Client(server) as client:
         detective = await call(
-            client, "search_countermeasure_library", {"control_type": "detective"}
+            client, "search_countermeasure_library", {"control_function": "detective"}
         )
         cheap = await call(client, "search_countermeasure_library", {"cost": "low"})
         both = await call(
             client,
             "search_countermeasure_library",
-            {"control_type": "detective", "cost": "low"},
+            {"control_function": "detective", "cost": "low"},
         )
 
     assert [row["id"] for row in detective] == [18]

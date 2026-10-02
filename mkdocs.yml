@@ -39,6 +39,7 @@ nav:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - Configuration: getting-started/configuration.md
+      - Local Podman (rootless): getting-started/local-podman.md
   - Concepts:
       - Library Packs: concepts/library-packs.md
       - DFD Editor: concepts/dfd-editor.md
@@ -54,12 +55,15 @@ nav:
       - Magic Links: concepts/magic-links.md
   - Guides:
       - Creating a Threat Model: guides/creating-threat-model.md
+      - End-to-End Assessment Workflow: guides/end-to-end-assessment-workflow.md
       - Guest Editor: guides/guest-editor.md
       - Pentest Scope: guides/pentests.md
       - Importing & Exporting: guides/importing-exporting.md
       - Compliance Mapping: guides/compliance-mapping.md
       - Report Generation: guides/report-generation.md
+      - Collaborative Review and Handoff: guides/collaborative-review-and-handoff.md
       - AI Features: guides/ai-features.md
+      - AI Threat Model Generation: guides/ai-threat-model-generation.md
   - Recipes:
       - IEC 62443: recipes/iec-62443.md
       - EU Banking: recipes/eu-banking.md

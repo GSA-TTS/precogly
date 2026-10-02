@@ -7,7 +7,7 @@ countermeasures:
     description: |
       Cryptographic authentication of neural signal packets from the electrode
       array. Uses per-session keys to prevent injection of synthetic signals.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: headset-encrypted-telemetry
@@ -15,7 +15,7 @@ countermeasures:
     description: |
       AES-256 encryption of the wireless neural data link between headset
       and signal processor. Prevents eavesdropping on raw neural signals.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: headset-secure-boot
@@ -23,7 +23,7 @@ countermeasures:
     description: |
       Cryptographic verification of headset firmware at boot using a hardware
       root of trust. Prevents execution of tampered firmware.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: headset-firmware-signing
@@ -31,7 +31,7 @@ countermeasures:
     description: |
       All firmware updates must be signed by the manufacturer's private key.
       Device rejects unsigned or improperly signed firmware images.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   # ============================================================================
@@ -43,7 +43,7 @@ countermeasures:
       Statistical validation of incoming neural signals against physiologically
       plausible ranges. Rejects signals with non-biological spectral profiles
       or amplitude distributions.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: sigproc-realtime-watchdog
@@ -52,7 +52,7 @@ countermeasures:
       Hardware watchdog timer that triggers a safe-state shutdown if signal
       processing exceeds the real-time deadline. Prevents latency-induced
       unsafe behavior in closed-loop systems.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: sigproc-calibration-encryption
@@ -60,7 +60,7 @@ countermeasures:
     description: |
       Encrypt patient calibration profiles at rest on the edge processor
       using per-patient keys stored in a secure enclave.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: sigproc-anomaly-detection
@@ -69,7 +69,7 @@ countermeasures:
       Continuous monitoring for adversarial patterns in the neural signal
       stream. Flags statistically anomalous inputs for review and triggers
       safe-mode if confidence drops below threshold.
-    control_type: detective
+    control_functions: [detective]
     cost: medium
 
   # ============================================================================
@@ -80,7 +80,7 @@ countermeasures:
     description: |
       Cryptographic signing and integrity verification of decoder model
       artifacts. Device rejects models that fail signature verification.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: decoder-differential-privacy
@@ -88,7 +88,7 @@ countermeasures:
     description: |
       Apply differential privacy mechanisms during model training to prevent
       reconstruction of individual patient neural patterns from the trained model.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: decoder-confidence-threshold
@@ -97,7 +97,7 @@ countermeasures:
       Decoder only emits commands when classification confidence exceeds a
       clinician-configured threshold. Low-confidence outputs are discarded,
       preventing adversarial manipulation of marginal decisions.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: decoder-model-integrity-check
@@ -105,7 +105,7 @@ countermeasures:
     description: |
       Periodic hash verification of the in-memory decoder model against a
       signed manifest. Detects runtime model corruption or hot-patching attacks.
-    control_type: detective
+    control_functions: [detective]
     cost: low
 
   # ============================================================================
@@ -117,7 +117,7 @@ countermeasures:
       Dedicated analog safety circuit that physically limits maximum charge
       delivery per phase, independent of software. Cannot be bypassed by
       firmware or software compromise.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: stim-dual-authorization
@@ -126,7 +126,7 @@ countermeasures:
       Stimulation requires concurrent authorization from both the decoder
       output and an independent safety monitor. Prevents single point of
       compromise from triggering stimulation.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: stim-parameter-range-enforcement
@@ -135,7 +135,7 @@ countermeasures:
       Software-enforced bounds on all stimulation parameters (amplitude,
       frequency, pulse width, duty cycle) set by the prescribing clinician.
       Changes require re-authentication.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: stim-audit-logging
@@ -143,7 +143,7 @@ countermeasures:
     description: |
       Tamper-evident logging of all stimulation events with timestamps,
       parameters, authorization source, and patient state at time of delivery.
-    control_type: detective
+    control_functions: [detective]
     cost: low
 
   # ============================================================================
@@ -154,7 +154,7 @@ countermeasures:
     description: |
       AES-256 encryption of all neural recordings and patient data at rest.
       Key management via HSM with per-patient encryption keys.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: cloud-access-control
@@ -163,7 +163,7 @@ countermeasures:
       Fine-grained RBAC restricting neural data access by role (clinician,
       researcher, patient, engineer). Enforces need-to-know and minimum
       necessary access per HIPAA requirements.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: cloud-model-pipeline-security
@@ -172,7 +172,7 @@ countermeasures:
       CI/CD pipeline for decoder models with signed artifacts, reproducible
       builds, vulnerability scanning, and staged rollout with automatic
       rollback on anomaly detection.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: cloud-audit-trail
@@ -181,7 +181,7 @@ countermeasures:
       Immutable audit log of all data access, model deployments, configuration
       changes, and therapy sessions. Meets FDA 21 CFR Part 11 and HIPAA
       requirements for electronic records.
-    control_type: detective
+    control_functions: [detective]
     cost: medium
 
   # ============================================================================
@@ -193,7 +193,7 @@ countermeasures:
       Encrypt sensitive neural data fields individually so that database
       administrators cannot access raw recordings without patient-specific
       decryption keys.
-    control_type: preventive
+    control_functions: [preventive]
     cost: high
 
   - id: datastore-immutable-recordings
@@ -201,7 +201,7 @@ countermeasures:
     description: |
       Write-once storage for neural recordings with cryptographic checksums.
       Prevents retroactive modification of therapy session data.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: datastore-de-identification
@@ -209,7 +209,7 @@ countermeasures:
     description: |
       Automated pipeline to strip direct identifiers and apply k-anonymity
       to neural datasets before use in research or model training.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   # ============================================================================
@@ -220,7 +220,7 @@ countermeasures:
     description: |
       TLS 1.3 or equivalent encryption for all data in transit between
       BCI components. Protects neural data and stimulation commands.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low
 
   - id: dataflow-mutual-auth
@@ -228,7 +228,7 @@ countermeasures:
     description: |
       Certificate-based mutual authentication between all BCI components.
       Prevents rogue devices from joining the signal chain.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: dataflow-command-signing
@@ -236,7 +236,7 @@ countermeasures:
     description: |
       All stimulation commands cryptographically signed by the decoder
       engine. Stimulation controller rejects unsigned commands.
-    control_type: preventive
+    control_functions: [preventive]
     cost: medium
 
   - id: dataflow-temporal-validation
@@ -244,5 +244,5 @@ countermeasures:
     description: |
       Timestamp and nonce-based freshness validation on all commands.
       Prevents replay of captured neural commands or stimulation sequences.
-    control_type: preventive
+    control_functions: [preventive]
     cost: low

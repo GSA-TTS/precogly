@@ -588,11 +588,11 @@ class TestPerInstanceThreatDetails(TmLibraryAdapterTestMixin, TestCase):
             threat_y.severity_scoring_metadata["rationale"], "Legacy format"
         )
 
-    def test_dismissal_state_survives_roundtrip(self):
-        """Per-instance is_dismissed and dismissal_reason should survive
+    def test_triage_state_survives_roundtrip(self):
+        """Per-instance triage_status and decision_rationale should survive
         export/import roundtrip."""
         json_data = {
-            "scope": {"title": "Dismissal Test"},
+            "scope": {"title": "Triage Test"},
             "components": [
                 {"symbolic_name": "comp-a", "title": "Component A"},
                 {"symbolic_name": "comp-b", "title": "Component B"},
@@ -612,15 +612,15 @@ class TestPerInstanceThreatDetails(TmLibraryAdapterTestMixin, TestCase):
             threat_model=threat_model, name="Component A"
         )
 
-        # Dismiss one instance, leave the other active
+        # Triage one instance as accepted, leave the other open
         threat_a = ComponentInstanceThreat.objects.get(
             component=comp_a, threat_name="Shared Threat"
         )
-        threat_a.is_dismissed = True
-        threat_a.dismissal_reason = "Not applicable to this component"
-        threat_a.save(update_fields=["is_dismissed", "dismissal_reason"])
+        threat_a.triage_status = "accept"
+        threat_a.decision_rationale = "Not applicable to this component"
+        threat_a.save(update_fields=["triage_status", "decision_rationale"])
 
-        # threat_b stays active (is_dismissed=False, default)
+        # threat_b stays active (triage_status="open", default)
 
         # Export
         exported = self.adapter.export_data(threat_model)
@@ -629,14 +629,14 @@ class TestPerInstanceThreatDetails(TmLibraryAdapterTestMixin, TestCase):
         instance_details = threat_details["shared-threat"]["instance_details"]
         details_by_affected = {d["affected"]: d for d in instance_details}
 
-        # Verify export: comp-a is dismissed, comp-b is not
-        self.assertTrue(details_by_affected["comp-a"]["is_dismissed"])
+        # Verify export: comp-a is triaged (accept), comp-b is not
+        self.assertEqual(details_by_affected["comp-a"]["triage_status"], "accept")
         self.assertEqual(
-            details_by_affected["comp-a"]["dismissal_reason"],
+            details_by_affected["comp-a"]["decision_rationale"],
             "Not applicable to this component",
         )
-        self.assertNotIn("is_dismissed", details_by_affected["comp-b"])
-        self.assertNotIn("dismissal_reason", details_by_affected["comp-b"])
+        self.assertNotIn("triage_status", details_by_affected["comp-b"])
+        self.assertNotIn("decision_rationale", details_by_affected["comp-b"])
 
         # Re-import and verify
         reimported_model, _ = self.adapter.import_data(exported, self.org, self.user)
@@ -655,13 +655,13 @@ class TestPerInstanceThreatDetails(TmLibraryAdapterTestMixin, TestCase):
             component=reimported_comp_b, threat_name="Shared Threat"
         )
 
-        self.assertTrue(reimported_threat_a.is_dismissed)
+        self.assertEqual(reimported_threat_a.triage_status, "accept")
         self.assertEqual(
-            reimported_threat_a.dismissal_reason,
+            reimported_threat_a.decision_rationale,
             "Not applicable to this component",
         )
-        self.assertFalse(reimported_threat_b.is_dismissed)
-        self.assertEqual(reimported_threat_b.dismissal_reason, "")
+        self.assertEqual(reimported_threat_b.triage_status, "open")
+        self.assertEqual(reimported_threat_b.decision_rationale, "")
 
 
 class TestSymbolicNameCollision(TmLibraryAdapterTestMixin, TestCase):

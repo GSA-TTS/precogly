@@ -191,11 +191,8 @@ class LibraryCountermeasure(BaseModel):
     id: int
     name: str
 
-    # Not a `Literal`, unlike the two below. `CountermeasureLibrary.control_type` is a
-    # bare `CharField` with `default="preventive"` and no `choices`, so its vocabulary
-    # is whatever packs put there — preventive, detective and corrective on the seeded
-    # catalog. Closing it would reject a pack rather than a bug.
-    control_type: str
+    control_functions: list[str] = Field(default_factory=list)
+    control_nature: str = ""
 
     cost: Literal["low", "medium", "high"]
     default_status: Literal["gap", "platform"]

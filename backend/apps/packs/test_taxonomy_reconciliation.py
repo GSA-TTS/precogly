@@ -33,10 +33,11 @@ class TaxonomyJoinReconciliationTests(SimpleTestCase):
         info.path = f"/packs/{slug}"
         return info
 
+    @mock.patch("apps.packs.services.reconcile_cross_pack_joins_from_source")
     @mock.patch("apps.packs.services.reconcile_taxonomy_joins_from_source")
     @mock.patch("apps.packs.services.discover_packs_from_source")
     def test_non_forced_sync_still_reconciles_joins(
-        self, mock_discover, mock_reconcile
+        self, mock_discover, mock_reconcile, mock_cross_pack
     ):
         # A pack whose version is unchanged is skipped, so its joins are never
         # re-read by the import loop itself.
@@ -50,10 +51,13 @@ class TaxonomyJoinReconciliationTests(SimpleTestCase):
 
     # The forced path runs the requirement-overlay pass, which queries
     # LibraryPack, so that is mocked out to keep this a unit test.
+    @mock.patch("apps.packs.services.reconcile_cross_pack_joins_from_source")
     @mock.patch("apps.packs.services.LibraryPack")
     @mock.patch("apps.packs.services.reconcile_taxonomy_joins_from_source")
     @mock.patch("apps.packs.services.discover_packs_from_source")
-    def test_forced_sync_reconciles_joins(self, mock_discover, mock_reconcile, mock_lp):
+    def test_forced_sync_reconciles_joins(
+        self, mock_discover, mock_reconcile, mock_lp, mock_cross_pack
+    ):
         mock_discover.return_value = [self._pack_info("ot-ics", "1.1.0", "1.0.0")]
         mock_lp.objects.filter.return_value.first.return_value = None
 

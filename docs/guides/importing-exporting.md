@@ -182,6 +182,11 @@ The export maps Precogly entities to CycloneDX 2.0 structures:
 | Countermeasures | Top-level `controls` array |
 | Risks | Top-level `risks` array |
 | Compliance mappings | `definitions.requirements` |
+| Threat triage status | Scenario `properties` (`precogly:threat-status`, `precogly:decision-rationale`) |
+| Control functions | Control `properties` (`precogly:control-functions`) |
+| Control nature | Control `properties` (`precogly:control-nature`) |
+| Taxonomy categories | Threat `categories` |
+| Assumptions | Blueprint `assumptions` |
 
 Entities are cross-linked using BOM references. If the threat model was originally imported from CycloneDX, any Tier 3 passthrough data stored in `format_metadata.cyclonedx` is re-emitted in the export.
 
@@ -204,6 +209,8 @@ Precogly validates that the file contains `specFormat: "CycloneDX"` and a `specV
     If the CycloneDX file contains multiple blueprints, only the first blueprint is imported. A warning is logged for any additional blueprints.
 
 CycloneDX statuses, component categories, severity levels, and risk responses are mapped to Precogly equivalents during import. Review imported control statuses to confirm they match your expectations, as some CycloneDX status values may not have an exact Precogly counterpart.
+
+Precogly-specific properties (`precogly:threat-status`, `precogly:decision-rationale`, `precogly:control-functions`, `precogly:control-nature`) are round-tripped through CycloneDX export and import, preserving triage decisions and control classification across tool boundaries. Taxonomy categories and assumptions are also preserved.
 
 ### When to use CycloneDX vs TM-Library
 

@@ -367,13 +367,15 @@ class TmLibraryAdapter(BaseAdapter):
             threat_instance.impact_description = impact_description
             update_fields.append("impact_description")
 
-        if detail.get("is_dismissed"):
-            threat_instance.is_dismissed = True
-            update_fields.append("is_dismissed")
-            dismissal_reason = detail.get("dismissal_reason", "")
-            if dismissal_reason:
-                threat_instance.dismissal_reason = dismissal_reason
-                update_fields.append("dismissal_reason")
+        # New format: triage_status / decision_rationale
+        triage_status = detail.get("triage_status")
+        if triage_status:
+            threat_instance.triage_status = triage_status
+            update_fields.append("triage_status")
+            decision_rationale = detail.get("decision_rationale", "")
+            if decision_rationale:
+                threat_instance.decision_rationale = decision_rationale
+                update_fields.append("decision_rationale")
 
         if update_fields:
             threat_instance.save(update_fields=update_fields)
@@ -1770,12 +1772,12 @@ class TmLibraryAdapter(BaseAdapter):
                             threat_instance.severity_scoring_metadata
                         )
 
-                    # Per-instance dismissal state
-                    if threat_instance.is_dismissed:
-                        detail_entry["is_dismissed"] = True
-                        if threat_instance.dismissal_reason:
-                            detail_entry["dismissal_reason"] = (
-                                threat_instance.dismissal_reason
+                    # Per-instance triage state
+                    if threat_instance.triage_status != "open":
+                        detail_entry["triage_status"] = threat_instance.triage_status
+                        if threat_instance.decision_rationale:
+                            detail_entry["decision_rationale"] = (
+                                threat_instance.decision_rationale
                             )
 
                     # Per-instance threat persona

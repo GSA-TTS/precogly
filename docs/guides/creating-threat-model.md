@@ -243,13 +243,13 @@ The workspace offers two views:
 
 ### Adding threats: library vs. custom
 
-**Using library packs (Approach 1):** Select a component to see threats pre-mapped from the library. Threats arrive with taxonomy links already attached. You can accept, dismiss, or reorder them.
+**Using library packs (Approach 1):** Select a component to see threats pre-mapped from the library. Threats arrive with taxonomy links already attached. You can triage them, accept them as-is, or reorder them.
 
 **From scratch (Approach 2):** Click **Add Custom Threat** to create a threat manually. You write the name and description, then optionally link it to taxonomy entries (STRIDE categories, CAPEC IDs, CWE IDs, etc.).
 
 In both cases, you can:
 
-- **Dismiss threats** that don't apply, with a documented reason (preserved for audit)
+- **Triage threats** that don't apply by setting a decision status: Accept (risk is tolerable), Mitigate (add countermeasures), Delegate (transfer to another party), or Eliminate (remove the threat source). Each triaged decision requires a rationale, preserved for audit.
 - **Reorder threats** by dragging to set priority
 
 ### Set threat severity

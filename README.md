@@ -15,7 +15,7 @@
 ### Quick Start
 
 ```bash
-  git clone --branch v0.3.0 https://github.com/precogly/precogly.git
+  git clone --branch v0.4.0 https://github.com/precogly/precogly.git
   cd precogly
   docker compose up --build
 ```

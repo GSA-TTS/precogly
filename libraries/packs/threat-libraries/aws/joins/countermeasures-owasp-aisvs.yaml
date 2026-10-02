@@ -130,3 +130,65 @@ mappings:
       - "12.2.1"   # Anomaly and drift detection for AI system behavior
       - "12.3.1"   # AI-specific metrics dashboards
     sufficiency: partial
+
+  # ==========================================================================
+  # Batch 3: AI/ML Expansion (SageMaker, Bedrock Agents, Knowledge Bases)
+  # ==========================================================================
+
+  # SageMaker
+  - countermeasure: sagemaker-vpc-isolation
+    requirements:
+      - "8.1.1"
+    sufficiency: partial
+
+  - countermeasure: sagemaker-training-data-protection
+    requirements:
+      - "12.1.1"
+    sufficiency: partial
+
+  - countermeasure: sagemaker-endpoint-auth
+    requirements:
+      - "4.1.1"
+    sufficiency: partial
+
+  # Bedrock Agents
+  - countermeasure: bedrock-agent-input-validation
+    requirements:
+      - "9.2.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-agent-least-privilege
+    requirements:
+      - "9.2.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-agent-role-restriction
+    requirements:
+      - "9.1.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-agent-guardrails
+    requirements:
+      - "3.5.1"
+    sufficiency: partial
+
+  # Bedrock Knowledge Bases
+  - countermeasure: bedrock-kb-data-source-validation
+    requirements:
+      - "5.1.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-kb-scoped-sync
+    requirements:
+      - "5.2.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-kb-access-control
+    requirements:
+      - "5.2.1"
+    sufficiency: partial
+
+  - countermeasure: bedrock-kb-sensitive-data-exclusion
+    requirements:
+      - "5.1.1"
+    sufficiency: partial

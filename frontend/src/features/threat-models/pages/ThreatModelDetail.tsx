@@ -160,8 +160,7 @@ export function ThreatModelDetail() {
     updateCountermeasureDueDate,
     updateCountermeasureExternalTicket,
     assignOwner,
-    dismissThreat,
-    restoreThreat,
+    updateTriageStatus,
     reorderThreats,
     reorderCountermeasures,
   } = useWorkspaceThreatAnalysis(id, diagrams, analysisComponents)
@@ -503,7 +502,7 @@ export function ThreatModelDetail() {
                 title="Click to rename"
               >
                 {threatModel.name}
-                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground" />
               </button>
             )}
             <span className="text-muted-foreground">/</span>
@@ -761,8 +760,11 @@ export function ThreatModelDetail() {
                     onAssignOwner={assignOwner}
                     onAddComponent={() => setAddComponentDialogOpen(true)}
                     onAddCustomThreat={() => setAddThreatDialogOpen(true)}
-                    onDismissThreat={dismissThreat}
-                    onRestoreThreat={restoreThreat}
+                    onUpdateTriageStatus={(threatId, status, rationale) => {
+                      if (selectedComponentId) {
+                        updateTriageStatus(threatId, selectedComponentId, status, rationale)
+                      }
+                    }}
                     onAddCustomCountermeasure={() => setAddCountermeasureDialogOpen(true)}
                     onCountermeasurePriorityChange={updateCountermeasurePriority}
                     onCountermeasureDueDateChange={updateCountermeasureDueDate}

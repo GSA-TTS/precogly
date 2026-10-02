@@ -32,7 +32,7 @@ class CountermeasureLibraryListTests(TestCase):
         cls.countermeasure = CountermeasureLibrary.objects.create(
             name="Encrypt Data at Rest",
             description="Apply encryption to data stored on disk.",
-            control_type="preventive",
+            control_functions=["preventive"],
         )
 
     def setUp(self):

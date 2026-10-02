@@ -2,8 +2,14 @@
  * API hooks for risk endpoints.
  */
 
-import { useQuery, useMutation, useQueryClient, skipToken } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  skipToken,
+  keepPreviousData,
+} from '@tanstack/react-query'
+import { api, getPage } from '@/lib/api'
 import type {
   Risk,
   ScoringMethod,
@@ -17,26 +23,44 @@ import type {
 // Query keys
 export const riskKeys = {
   all: ['risks'] as const,
+  // Every page's key extends `list`, so the mutations below can keep
+  // invalidating `list` alone and still reach whichever pages are cached.
   list: (threatModelId: string) => [...riskKeys.all, 'list', threatModelId] as const,
+  page: (threatModelId: string, page: number, pageSize: number) =>
+    [...riskKeys.list(threatModelId), { page, pageSize }] as const,
   detail: (threatModelId: string, riskId: number) =>
     [...riskKeys.all, 'detail', threatModelId, riskId] as const,
   scoringMethods: ['scoring-methods'] as const,
 }
 
 /**
- * Fetch all risks for a threat model.
+ * Page sizes the register offers.
+ *
+ * The largest must not exceed `ClientSizedPagination.max_page_size` (200). The
+ * server clamps a larger request rather than rejecting it, so the page controls
+ * would compute a page count from a size they never got.
  */
-export function useRisks(threatModelId: string | null | undefined) {
+export const RISK_PAGE_SIZES = [20, 50, 100, 200] as const
+export const DEFAULT_RISK_PAGE_SIZE = RISK_PAGE_SIZES[0]
+
+/**
+ * Fetch one page of a threat model's risks.
+ *
+ * Returns the whole `Page`. Returning `results` alone is what made the header
+ * report 20 risks for a register of 24: the total lives in `count`.
+ */
+export function useRisks(
+  threatModelId: string | null | undefined,
+  { page = 1, pageSize = DEFAULT_RISK_PAGE_SIZE }: { page?: number; pageSize?: number } = {}
+) {
   return useQuery({
-    queryKey: riskKeys.list(threatModelId!),
+    queryKey: riskKeys.page(threatModelId!, page, pageSize),
     queryFn: threatModelId
-      ? async () => {
-          const response = await api.get<{ results: Risk[] } | Risk[]>(
-            `/threat-models/${threatModelId}/risks/`
-          )
-          return Array.isArray(response) ? response : response.results
-        }
+      ? () => getPage<Risk>(`/threat-models/${threatModelId}/risks/`, { page, pageSize })
       : skipToken,
+    // Hold the previous page on screen while the next one loads. Without this
+    // every page step unmounts the table and shows the tab-wide spinner.
+    placeholderData: keepPreviousData,
   })
 }
 

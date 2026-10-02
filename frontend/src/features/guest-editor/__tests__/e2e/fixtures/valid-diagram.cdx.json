@@ -1,0 +1,104 @@
+{
+  "specFormat": "CycloneDX",
+  "specVersion": "2.0",
+  "serialNumber": "urn:uuid:test-valid-diagram",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "tools": {
+      "components": [
+        { "type": "application", "name": "Precogly Guest Editor", "version": "1.0.0" }
+      ]
+    }
+  },
+  "blueprints": [
+    {
+      "bom-ref": "blueprint-test-1",
+      "name": "Test Diagram",
+      "modelTypes": ["data-flow"],
+      "assets": [
+        { "bom-ref": "asset-web-server-1", "name": "Web Server", "type": "component" },
+        { "bom-ref": "asset-database-2", "name": "Database", "type": "data-store" }
+      ],
+      "flows": [
+        {
+          "bom-ref": "flow-query-1",
+          "source": "asset-web-server-1",
+          "destination": "asset-database-2",
+          "type": "data",
+          "name": "Query"
+        }
+      ],
+      "visualizations": [
+        {
+          "type": "precogly-dfd",
+          "name": "Test Diagram",
+          "data": {
+            "nodes": [
+              {
+                "id": "process-1",
+                "type": "process",
+                "position": { "x": 100, "y": 100 },
+                "data": { "label": "Web Server", "technology": "" },
+                "style": { "width": 100, "height": 100 }
+              },
+              {
+                "id": "datastore-1",
+                "type": "datastore",
+                "position": { "x": 400, "y": 100 },
+                "data": { "label": "Database", "technology": "" },
+                "style": { "width": 120, "height": 60 }
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge-1",
+                "source": "process-1",
+                "target": "datastore-1",
+                "type": "dataFlow",
+                "data": { "label": "Query", "encrypted": false, "authenticated": false }
+              }
+            ],
+            "notationStyle": "yourdon"
+          }
+        }
+      ]
+    }
+  ],
+  "threats": {
+    "threats": [
+      {
+        "bom-ref": "threat-sql-injection-1",
+        "name": "SQL Injection",
+        "description": "Attacker injects malicious SQL",
+        "categories": [{ "taxonomy": "stride", "id": "tampering", "name": "Tampering" }],
+        "affectedAssets": ["asset-web-server-1"]
+      }
+    ],
+    "scenarios": [
+      {
+        "bom-ref": "scenario-sql-injection-1",
+        "threat": "threat-sql-injection-1",
+        "affectedAssets": ["asset-web-server-1"],
+        "riskScore": { "level": "high" },
+        "properties": [
+          { "name": "precogly:threat-status", "value": "mitigate" }
+        ]
+      }
+    ]
+  },
+  "controls": [
+    {
+      "bom-ref": "control-input-validation-1",
+      "name": "Input Validation",
+      "description": "Validate all user inputs",
+      "category": "preventive",
+      "status": "recommended",
+      "mitigations": ["threat-sql-injection-1"],
+      "properties": [
+        { "name": "precogly:control-functions", "value": "preventive" },
+        { "name": "precogly:control-nature", "value": "technical" }
+      ]
+    }
+  ]
+}

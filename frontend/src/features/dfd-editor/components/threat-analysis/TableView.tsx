@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import type { CanvasData } from '../../types'
 import type { ComponentThreat, CountermeasureStatus } from '../../types/threat-analysis'
 import { deriveThreatStatus, THREAT_STATUS_CONFIG } from '../../types/threat-analysis'
+import { isActiveThreat } from '@/types/triage'
 import type { TaxonomyEntry } from '@/types/domain'
 import { TaxonomyBadges } from '@/components/shared/TaxonomyBadges'
 import { getAncestryPath, buildNodesMap } from './hierarchy-utils'
@@ -78,30 +79,40 @@ export function TableView({
     const rows: FlattenedThreat[] = []
 
     componentThreats
-      .filter((ct) => !ct.dismissed)
+      .filter((ct) => isActiveThreat(ct.triageStatus))
       .forEach((ct) => {
-        const node = canvasData.nodes.find((n) => n.id === ct.componentId)
-        if (!node) return
-
-        // Use threat metadata from backend (stored in ComponentThreat)
         if (!ct.threatName) return
 
-        const technologyName = resolveTechName((node.data as { technology?: string }).technology)
-
-        // Compute parent path for nested process nodes
+        const isDataflow = ct.threatType === 'dataflow'
+        let componentLabel: string
+        let componentType: string
+        let technologyName = ''
         let parentPath: string | undefined
-        if (node.type === 'process') {
-          const ancestry = getAncestryPath(node.id, nodesMap)
-          if (ancestry.length > 1) {
-            // Exclude the node itself — show only ancestors
-            parentPath = ancestry
-              .slice(0, -1)
-              .map((a) => {
-                const aLabel = String(a.data.label)
-                const aTech = resolveTechName((a.data as { technology?: string }).technology)
-                return aLabel.toLowerCase().includes('new ') ? (aTech || aLabel) : aLabel
-              })
-              .join(' > ')
+
+        if (isDataflow) {
+          const edge = canvasData.edges.find((e) => e.id === ct.componentId)
+          componentLabel = ct.dataflowLabel || ct.componentName || (edge?.data as { label?: string })?.label || 'Data Flow'
+          componentType = 'dataFlow'
+        } else {
+          const node = canvasData.nodes.find((n) => n.id === ct.componentId)
+          if (!node) return
+
+          componentLabel = String(node.data.label)
+          componentType = node.type as string
+          technologyName = resolveTechName((node.data as { technology?: string }).technology)
+
+          if (node.type === 'process') {
+            const ancestry = getAncestryPath(node.id, nodesMap)
+            if (ancestry.length > 1) {
+              parentPath = ancestry
+                .slice(0, -1)
+                .map((a) => {
+                  const aLabel = String(a.data.label)
+                  const aTech = resolveTechName((a.data as { technology?: string }).technology)
+                  return aLabel.toLowerCase().includes('new ') ? (aTech || aLabel) : aLabel
+                })
+                .join(' > ')
+            }
           }
         }
 
@@ -114,8 +125,8 @@ export function TableView({
         rows.push({
           componentThreatId: ct.id,
           componentId: ct.componentId,
-          componentLabel: String(node.data.label),
-          componentType: node.type as string,
+          componentLabel,
+          componentType,
           technology: technologyName,
           parentPath,
           threatId: ct.threatId,
@@ -212,7 +223,7 @@ export function TableView({
                     )}
                     <div className="font-medium">{row.componentLabel}</div>
                     <div className="text-xs text-muted-foreground capitalize">
-                      {row.componentType}
+                      {row.componentType === 'dataFlow' ? 'Data Flow' : row.componentType}
                     </div>
                   </TableCell>
                   <TableCell>

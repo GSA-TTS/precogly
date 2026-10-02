@@ -178,9 +178,9 @@ class CountermeasureLibraryViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    filterset_fields = ["control_type", "cost"]
+    filterset_fields = ["control_nature", "cost"]
     search_fields = ["name", "description"]
-    ordering_fields = ["name", "control_type", "created_at"]
+    ordering_fields = ["name", "created_at"]
     ordering = ["name"]
 
     def get_queryset(self):
@@ -380,7 +380,8 @@ class ComponentInstanceThreatViewSet(viewsets.ModelViewSet):
             countermeasure_library=countermeasure,
             countermeasure_name=countermeasure.name,
             countermeasure_description=countermeasure.description,
-            control_type=countermeasure.control_type,
+            control_functions=countermeasure.control_functions,
+            control_nature=countermeasure.control_nature,
             status=effective_status,
         )
 
@@ -656,7 +657,8 @@ class DataFlowInstanceThreatViewSet(viewsets.ModelViewSet):
             countermeasure_library=countermeasure,
             countermeasure_name=countermeasure.name,
             countermeasure_description=countermeasure.description,
-            control_type=countermeasure.control_type,
+            control_functions=countermeasure.control_functions,
+            control_nature=countermeasure.control_nature,
             status=effective_status,
         )
 

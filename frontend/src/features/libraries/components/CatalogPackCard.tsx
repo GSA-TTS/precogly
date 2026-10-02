@@ -16,8 +16,6 @@ export function CatalogPackCard({
   onImport,
   onPreview,
   onValidate,
-  onTagClick,
-  activeTag,
   isImporting,
   isValidating,
   isSecurityTeam,
@@ -26,8 +24,6 @@ export function CatalogPackCard({
   onImport: (pack: UnifiedPack) => void
   onPreview: (pack: UnifiedPack) => void
   onValidate?: (pack: UnifiedPack) => void
-  onTagClick?: (tag: string) => void
-  activeTag?: string
   isImporting: boolean
   isValidating?: boolean
   isSecurityTeam: boolean
@@ -54,22 +50,6 @@ export function CatalogPackCard({
       <p className="text-sm text-muted-foreground line-clamp-3">
         {pack.description || 'No description available'}
       </p>
-
-      <div className="flex flex-wrap gap-1">
-        {pack.tags.map((tag) => (
-          <Badge
-            key={tag}
-            variant={activeTag === tag ? 'default' : 'outline'}
-            className={`text-xs cursor-pointer hover:bg-primary/10 ${activeTag === tag ? 'bg-primary text-primary-foreground' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTagClick?.(tag)
-            }}
-          >
-            {tag}
-          </Badge>
-        ))}
-      </div>
 
       {pack.dependsOn.length > 0 && (
         <p className="text-xs text-muted-foreground">

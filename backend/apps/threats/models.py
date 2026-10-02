@@ -241,7 +241,17 @@ class CountermeasureLibrary(TimestampedModel):
     )
     name = models.CharField(max_length=255)
     description = models.TextField()
-    control_type = models.CharField(max_length=50, default="preventive")
+    control_functions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of control functions, e.g. ['preventive', 'detective']",
+    )
+    control_nature = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Control nature: technical, administrative, or physical",
+    )
     default_status = models.CharField(
         max_length=20,
         choices=[("gap", "Gap"), ("platform", "Platform")],
@@ -318,6 +328,19 @@ class ThreatAccessLevel(models.TextChoices):
     PHYSICAL = "physical", "Physical"
 
 
+class TriageStatus(models.TextChoices):
+    """Threat triage decision status."""
+
+    OPEN = "open", "Open"
+    ACCEPT = "accept", "Accept"
+    MITIGATE = "mitigate", "Mitigate"
+    DELEGATE = "delegate", "Delegate"
+    ELIMINATE = "eliminate", "Eliminate"
+
+
+ACTIVE_TRIAGE_STATUSES = (TriageStatus.OPEN, TriageStatus.MITIGATE)
+
+
 class ComponentInstanceThreat(TimestampedModel):
     """Threat instance for a specific component."""
 
@@ -360,15 +383,16 @@ class ComponentInstanceThreat(TimestampedModel):
     )
     severity_scoring_metadata = models.JSONField(default=dict, blank=True)
 
-    # Dismiss functionality
-    is_dismissed = models.BooleanField(
-        default=False,
-        help_text="Dismissed threats are hidden from active view but preserved for audit",
+    # Triage decision
+    triage_status = models.CharField(
+        max_length=20,
+        choices=TriageStatus.choices,
+        default=TriageStatus.OPEN,
     )
-    dismissal_reason = models.TextField(
+    decision_rationale = models.TextField(
         blank=True,
         default="",
-        help_text="Reason for dismissing the threat",
+        help_text="Rationale for triage decision (recommended for accept/delegate/eliminate)",
     )
 
     format_metadata = models.JSONField(default=dict, blank=True)
@@ -466,15 +490,16 @@ class DataFlowInstanceThreat(TimestampedModel):
     )
     severity_scoring_metadata = models.JSONField(default=dict, blank=True)
 
-    # Dismiss functionality
-    is_dismissed = models.BooleanField(
-        default=False,
-        help_text="Dismissed threats are hidden from active view but preserved for audit",
+    # Triage decision
+    triage_status = models.CharField(
+        max_length=20,
+        choices=TriageStatus.choices,
+        default=TriageStatus.OPEN,
     )
-    dismissal_reason = models.TextField(
+    decision_rationale = models.TextField(
         blank=True,
         default="",
-        help_text="Reason for dismissing the threat",
+        help_text="Rationale for triage decision (recommended for accept/delegate/eliminate)",
     )
 
     format_metadata = models.JSONField(default=dict, blank=True)
@@ -586,10 +611,16 @@ class InstanceCountermeasure(TimestampedModel):
         blank=True,
         help_text="Copied from CountermeasureLibrary.description on creation",
     )
-    control_type = models.CharField(
-        max_length=50,
+    control_functions = models.JSONField(
+        default=list,
         blank=True,
-        help_text="Copied from CountermeasureLibrary.control_type on creation",
+        help_text="Copied from CountermeasureLibrary.control_functions on creation",
+    )
+    control_nature = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Copied from CountermeasureLibrary.control_nature on creation",
     )
     effectiveness = models.FloatField(
         null=True,

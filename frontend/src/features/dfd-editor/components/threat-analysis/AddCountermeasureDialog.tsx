@@ -28,18 +28,10 @@ import {
   useCreateCountermeasure,
   useApplyCountermeasure,
 } from '@/features/threat-models/api/threats'
+import { Checkbox } from '@/components/ui/checkbox'
 import { COUNTERMEASURE_STATUS_CONFIG } from '@/features/dfd-editor/types/threat-analysis'
 import type { CountermeasureStatus } from '@/features/dfd-editor/types/threat-analysis'
-
-const CONTROL_TYPES = [
-  { value: 'preventive', label: 'Preventive' },
-  { value: 'detective', label: 'Detective' },
-  { value: 'corrective', label: 'Corrective' },
-  { value: 'deterrent', label: 'Deterrent' },
-  { value: 'recovery', label: 'Recovery' },
-  { value: 'compensating', label: 'Compensating' },
-  { value: 'procedural', label: 'Procedural' },
-]
+import { CONTROL_FUNCTIONS, CONTROL_NATURES } from '@/types/controls'
 
 interface AddCountermeasureDialogProps {
   open: boolean
@@ -70,7 +62,8 @@ export function AddCountermeasureDialog({
   // Custom countermeasure fields
   const [customName, setCustomName] = useState('')
   const [customDescription, setCustomDescription] = useState('')
-  const [customControlType, setCustomControlType] = useState('')
+  const [customControlFunctions, setCustomControlFunctions] = useState<string[]>([])
+  const [customControlNature, setCustomControlNature] = useState('')
 
   // Fetch countermeasures - filter by applicable threats if we have a library threat
   const { data: countermeasureLibrary, isLoading } = useCountermeasureLibrary(threatLibraryId, threatModelId)
@@ -99,7 +92,7 @@ export function AddCountermeasureDialog({
     return (
       cm.name.toLowerCase().includes(query) ||
       (cm.description?.toLowerCase().includes(query) ?? false) ||
-      cm.controlType.toLowerCase().includes(query)
+      (cm.controlFunctions?.join(' ').toLowerCase().includes(query) ?? false)
     )
   }) ?? []
 
@@ -150,7 +143,8 @@ export function AddCountermeasureDialog({
         countermeasureLibrary: null as null,
         countermeasureName: customName,
         countermeasureDescription: customDescription,
-        controlType: customControlType || undefined,
+        controlFunctions: customControlFunctions.length > 0 ? customControlFunctions : undefined,
+        controlNature: customControlNature || undefined,
         status: 'gap',
       },
       { onSuccess: onMutationSuccess }
@@ -163,7 +157,8 @@ export function AddCountermeasureDialog({
     setSelectedCountermeasureId(null)
     setCustomName('')
     setCustomDescription('')
-    setCustomControlType('')
+    setCustomControlFunctions([])
+    setCustomControlNature('')
     setActiveTab('in-use')
   }
 
@@ -300,9 +295,13 @@ export function AddCountermeasureDialog({
                             </p>
                           )}
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-muted shrink-0 capitalize">
-                          {cm.controlType}
-                        </span>
+                        <div className="flex gap-1 shrink-0">
+                          {cm.controlFunctions?.map((fn) => (
+                            <span key={fn} className="text-xs px-2 py-1 rounded-full bg-muted capitalize">
+                              {fn}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -314,9 +313,16 @@ export function AddCountermeasureDialog({
               <div className="p-3 bg-muted/50 rounded-md">
                 <Label className="text-xs text-muted-foreground">Selected Countermeasure</Label>
                 <p className="font-medium">{selectedCountermeasure.name}</p>
-                <p className="text-sm text-muted-foreground capitalize">
-                  Control Type: {selectedCountermeasure.controlType}
-                </p>
+                {selectedCountermeasure.controlFunctions?.length > 0 && (
+                  <p className="text-sm text-muted-foreground capitalize">
+                    Functions: {selectedCountermeasure.controlFunctions.join(', ')}
+                  </p>
+                )}
+                {selectedCountermeasure.controlNature && (
+                  <p className="text-sm text-muted-foreground capitalize">
+                    Nature: {selectedCountermeasure.controlNature}
+                  </p>
+                )}
               </div>
             )}
           </TabsContent>
@@ -344,15 +350,36 @@ export function AddCountermeasureDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="custom-cm-control-type">Control Type</Label>
-              <Select value={customControlType} onValueChange={setCustomControlType}>
-                <SelectTrigger id="custom-cm-control-type">
-                  <SelectValue placeholder="Select control type..." />
+              <Label>Control Functions</Label>
+              <div className="flex flex-wrap gap-3">
+                {CONTROL_FUNCTIONS.map((fn) => (
+                  <label key={fn.value} className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={customControlFunctions.includes(fn.value)}
+                      onCheckedChange={(checked) => {
+                        setCustomControlFunctions((prev) =>
+                          checked
+                            ? [...prev, fn.value]
+                            : prev.filter((v) => v !== fn.value)
+                        )
+                      }}
+                    />
+                    {fn.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="custom-cm-control-nature">Control Nature</Label>
+              <Select value={customControlNature} onValueChange={setCustomControlNature}>
+                <SelectTrigger id="custom-cm-control-nature">
+                  <SelectValue placeholder="Select control nature..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONTROL_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
+                  {CONTROL_NATURES.map((nature) => (
+                    <SelectItem key={nature.value} value={nature.value}>
+                      {nature.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

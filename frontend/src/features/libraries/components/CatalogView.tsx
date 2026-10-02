@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Package, Search, X } from 'lucide-react'
+import { Package, Search } from 'lucide-react'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -124,10 +123,6 @@ export function CatalogView() {
         return firstSegment === filters.category
       })
     }
-    if (filters.tag) {
-      filtered = filtered.filter((p) => p.tags.includes(filters.tag!))
-    }
-
     return filtered
   }, [sourcePacks, dbPacks, filters])
 
@@ -135,13 +130,6 @@ export function CatalogView() {
     setFilters((prev) => ({
       ...prev,
       [key]: value === 'all' ? undefined : value,
-    }))
-  }
-
-  const handleTagClick = (tag: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      tag: prev.tag === tag ? undefined : tag,
     }))
   }
 
@@ -256,21 +244,6 @@ export function CatalogView() {
         </Select>
       </div>
 
-      {/* Active tag filter indicator */}
-      {filters.tag && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filtered by tag:</span>
-          <Badge
-            variant="default"
-            className="cursor-pointer gap-1"
-            onClick={() => handleTagClick(filters.tag!)}
-          >
-            {filters.tag}
-            <X className="h-3 w-3" />
-          </Badge>
-        </div>
-      )}
-
       {/* Result count */}
       {!isLoading && (
         <p className="text-sm text-muted-foreground">
@@ -294,8 +267,6 @@ export function CatalogView() {
               onImport={handleImportClick}
               onPreview={handlePreview}
               onValidate={handleValidate}
-              onTagClick={handleTagClick}
-              activeTag={filters.tag}
               isImporting={importingSlug === pack.slug}
               isValidating={validatingSlug === pack.slug}
               isSecurityTeam={isSecurityTeam}
@@ -307,7 +278,7 @@ export function CatalogView() {
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No packs found</h3>
           <p className="text-muted-foreground">
-            {filters.search || filters.category || filters.tag
+            {filters.search || filters.category
               ? 'Try adjusting your search or filters.'
               : 'No library packs are available yet.'}
           </p>

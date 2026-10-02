@@ -1,0 +1,105 @@
+{
+  "specFormat": "CycloneDX",
+  "specVersion": "2.0",
+  "serialNumber": "urn:uuid:test-backend-export",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "tools": {
+      "components": [
+        { "type": "application", "name": "Precogly", "version": "0.3.0" }
+      ]
+    }
+  },
+  "blueprints": [
+    {
+      "bom-ref": "blueprint-backend-1",
+      "name": "Backend Export Test",
+      "modelTypes": ["data-flow"],
+      "assets": [
+        { "bom-ref": "asset-api-1", "name": "API Gateway", "type": "component" },
+        { "bom-ref": "asset-cache-2", "name": "Redis Cache", "type": "data-store" }
+      ],
+      "flows": [
+        {
+          "bom-ref": "flow-cache-lookup-1",
+          "source": "asset-api-1",
+          "destination": "asset-cache-2",
+          "type": "data",
+          "name": "Cache Lookup"
+        }
+      ],
+      "visualizations": [
+        {
+          "type": "precogly-dfd",
+          "name": "Backend Export Test",
+          "data": {
+            "nodes": [
+              {
+                "id": "process-100",
+                "type": "process",
+                "position": { "x": 200, "y": 150 },
+                "data": {
+                  "label": "API Gateway",
+                  "technology": "nginx",
+                  "is_newly_inserted": false,
+                  "is_inline_editing": false,
+                  "data_sensitivity": "confidential"
+                },
+                "style": { "width": 100, "height": 100 }
+              },
+              {
+                "id": "datastore-100",
+                "type": "datastore",
+                "position": { "x": 500, "y": 150 },
+                "data": {
+                  "label": "Redis Cache",
+                  "technology": "redis",
+                  "data_store_type": "key_value",
+                  "data_sensitivity": "internal"
+                },
+                "style": { "width": 120, "height": 60 }
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge-100",
+                "source": "process-100",
+                "target": "datastore-100",
+                "type": "dataFlow",
+                "data": { "label": "Cache Lookup", "encrypted": false, "authenticated": true }
+              }
+            ],
+            "notation_style": "yourdon",
+            "system_context": {
+              "session": { "facilitator": "Test User", "participants": [], "meeting_date": "" },
+              "system_info": { "description": "API caching layer", "criticality": "high" },
+              "data_assets": [],
+              "assumptions": [],
+              "out_of_scope_items": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "threats": {
+    "threats": [
+      {
+        "bom-ref": "threat-cache-poisoning-1",
+        "name": "Cache Poisoning",
+        "description": "Attacker poisons cached responses",
+        "categories": [{ "taxonomy": "stride", "id": "tampering", "name": "Tampering" }],
+        "affectedAssets": ["asset-api-1"]
+      }
+    ],
+    "scenarios": [
+      {
+        "bom-ref": "scenario-cache-poisoning-1",
+        "threat": "threat-cache-poisoning-1",
+        "affectedAssets": ["asset-api-1"],
+        "riskScore": { "level": "high" }
+      }
+    ]
+  }
+}

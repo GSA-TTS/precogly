@@ -1,0 +1,106 @@
+name: Issue Triage Marker
+
+# All issue templates, except the blank one, auto-apply a label (bug_report.yml -> `bug`,
+# feature_request.yml -> `enhancement`), so an issue carrying no labels at all
+# arrived through the blank template or `gh issue create`, which bypass the
+# templates. This marks them so they land in a filter instead of the backlog.
+# This is not a classifier to try and guess labels. 
+# The workflow does 2 things:
+#   1. mark — on any issue event, add needs-triage if the issue has no labels, remove it once a real one appears.
+#   2. sweep — on manual trigger, do the same across every open issue at once.
+on:
+  issues:
+    types: [opened, reopened, labeled, unlabeled]
+  # The event path only ever sees one issue, so it cannot reach issues that
+  # predate this workflow. The manual sweep is what covers those, and what
+  # recovers from any event the runner missed.
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+# A human triaging an issue may add and remove several labels in a few seconds,
+# and each one re-triggers this. Serialize per issue so two runs cannot read
+# the label set and write back conflicting conclusions. Not cancel-in-progress:
+# the last event is the one whose state must win, so every run must finish.
+concurrency:
+  group: triage-marker-${{ github.event.issue.number || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  # One issue, in response to its own event.
+  mark:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add or remove the triage marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          MARKER: needs-triage
+        run: |
+          set -euo pipefail
+
+          # Read the label set back from the API rather than from
+          # github.event.issue.labels. Template labels are applied as part of
+          # issue creation and are not reliably in the `opened` payload, so
+          # trusting the payload would mark every template issue as untriaged.
+          # By the time a runner has started, the API has settled.
+          others=$(gh issue view "$ISSUE" --json labels \
+            --jq "[.labels[].name | select(. != \"$MARKER\")] | length")
+          marked=$(gh issue view "$ISSUE" --json labels \
+            --jq "[.labels[].name | select(. == \"$MARKER\")] | length")
+
+          # Both branches are no-ops in the steady state, which is what makes
+          # this safe to re-run on every label event.
+          if [ "$others" -eq 0 ] && [ "$marked" -eq 0 ]; then
+            echo "Issue #$ISSUE has no labels; adding $MARKER."
+            gh issue edit "$ISSUE" --add-label "$MARKER"
+          elif [ "$others" -gt 0 ] && [ "$marked" -eq 1 ]; then
+            echo "Issue #$ISSUE now has $others real label(s); removing $MARKER."
+            gh issue edit "$ISSUE" --remove-label "$MARKER"
+          else
+            echo "Issue #$ISSUE needs no change (real=$others, marker=$marked)."
+          fi
+
+# Do the same thing as the mark step, but on a manual trigger 
+  sweep:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile the triage marker across all open issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MARKER: needs-triage
+        run: |
+          set -euo pipefail
+
+          # `no:label` is a GitHub search qualifier, so the filtering happens
+          # server-side and the marker never appears in this result set.
+          # --limit is a hard cap, not a page size: raise it if the repo ever
+          # carries more than 500 open issues.
+          gh issue list --state open --limit 500 --search "no:label" \
+            --json number --jq '.[].number' > unmarked.txt
+
+          # The mirror case: an issue that was marked, then labeled by a human
+          # while this workflow was not running to see the event.
+          gh issue list --state open --limit 500 --label "$MARKER" \
+            --json number,labels \
+            --jq "[.[] | select([.labels[].name | select(. != \"$MARKER\")] | length > 0)] | .[].number" \
+            > stale.txt
+
+          echo "To mark: $(wc -l < unmarked.txt). To unmark: $(wc -l < stale.txt)."
+
+          while read -r n; do
+            [ -n "$n" ] || continue
+            echo "  + #$n"
+            gh issue edit "$n" --add-label "$MARKER"
+          done < unmarked.txt
+
+          while read -r n; do
+            [ -n "$n" ] || continue
+            echo "  - #$n"
+            gh issue edit "$n" --remove-label "$MARKER"
+          done < stale.txt

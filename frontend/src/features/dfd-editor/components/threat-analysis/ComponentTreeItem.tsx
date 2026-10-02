@@ -5,6 +5,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import type { ComponentThreat } from '../../types/threat-analysis'
 import { deriveThreatStatus } from '../../types/threat-analysis'
+import { isActiveThreat } from '@/types/triage'
 import type { ComponentTreeNode } from './hierarchy-utils'
 import { ComponentDataAssetsDisplay } from './ComponentDataAssetsDisplay'
 
@@ -20,7 +21,7 @@ function getComponentThreatSummary(
   threats: ComponentThreat[]
 ): { total: number; exposed: number; addressable: number; mitigated: number } {
   const componentThreats = threats.filter(
-    (t) => t.componentId === componentId && !t.dismissed
+    (t) => t.componentId === componentId && isActiveThreat(t.triageStatus)
   )
 
   let exposed = 0
@@ -130,7 +131,7 @@ export function ComponentTreeItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation()
                   onRequestDeleteComponent({ id: componentId, name: displayName })
@@ -144,7 +145,7 @@ export function ComponentTreeItem({
             {componentId !== undefined && !isAnalysisOnly && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"

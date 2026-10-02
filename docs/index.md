@@ -2,8 +2,8 @@
 
 ## The open-source alternative to commercial threat modeling platforms
 
-!!! success "v0.3.0 Released"
-    Precogly v0.3.0 is now available. See the [changelog](changelog.md) for details, or [download the release on GitHub](https://github.com/precogly/precogly/releases/tag/v0.3.0).
+!!! success "v0.4.0 Released"
+    Precogly v0.4.0 is now available. See the [changelog](changelog.md) for details, or [download the release on GitHub](https://github.com/precogly/precogly/releases/tag/v0.4.0).
 
 Open-source threat modeling tools lack enterprise features. Commercial tools come with heavy price tags and vendor lock-in. Precogly bridges this gap and democratizes threat modeling for every organization in the world.
 
@@ -35,7 +35,7 @@ Open-source threat modeling tools lack enterprise features. Commercial tools com
 ## Quick Start
 
 ```bash
-git clone --branch v0.3.0 https://github.com/precogly/precogly.git
+git clone --branch v0.4.0 https://github.com/precogly/precogly.git
 cd precogly
 docker compose up --build
 ```

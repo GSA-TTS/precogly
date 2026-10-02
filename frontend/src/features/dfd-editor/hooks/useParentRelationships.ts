@@ -212,8 +212,14 @@ export function useParentRelationships() {
           // Record this assignment for future cycle checks in same pass
           newParentAssignments.set(node.id, newParentId)
 
-          // If nothing changed, return original reference
-          if (node.parentId === newParentId) return node
+          // If nothing changed, return original reference (but clear stale extent)
+          if (node.parentId === newParentId) {
+            if (node.extent === 'parent') {
+              hasChanges = true
+              return { ...node, extent: undefined }
+            }
+            return node
+          }
 
           hasChanges = true
 

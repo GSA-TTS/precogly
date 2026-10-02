@@ -1,9 +1,20 @@
 import { Fragment, useState, useMemo, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import { Cog, User, ChevronDown, ChevronUp, ChevronRight, X, Plus, ArrowRight, Shield, Lock, GripVertical, Loader2, Trash2, Pencil } from 'lucide-react'
+import { Cog, User, ChevronDown, ChevronUp, ChevronRight, Plus, ArrowRight, Shield, Lock, GripVertical, Loader2, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +49,7 @@ import {
   THREAT_STATUS_CONFIG,
 } from '../../types/threat-analysis'
 import { TaxonomyBadges } from '@/components/shared/TaxonomyBadges'
+import { CONTROL_FUNCTIONS, CONTROL_NATURES } from '@/types/controls'
 import { EditComplianceMappingsDialog } from './EditComplianceMappingsDialog'
 import { EditTaxonomyMappingsDialog } from './EditTaxonomyMappingsDialog'
 import {
@@ -45,6 +57,7 @@ import {
   useDeleteCountermeasure,
   useUnlinkCountermeasure,
   useDeleteComponent,
+  useDeleteThreat,
   useUpdateThreat,
   useUpdateFlowThreat,
   useThreatPersonas,
@@ -64,6 +77,7 @@ import { ComplianceDetailSection } from './ComplianceDetailSection'
 import { CountermeasureStatusButtons } from './CountermeasureStatusButtons'
 import { ComponentTreeItem } from './ComponentTreeItem'
 import { useTechnologies } from '../../api/component-library'
+import { isActiveThreat, TRIAGE_STATUSES, TRIAGE_STATUS_COLORS, type TriageStatus } from '@/types/triage'
 import { DataFlowAssetsDisplay } from './DataFlowAssetsDisplay'
 import { SortableList } from '@/components/shared/SortableList'
 
@@ -98,8 +112,7 @@ interface ComponentViewProps {
   ) => void
   onAddComponent: () => void
   onAddCustomThreat: () => void
-  onDismissThreat: (componentThreatId: string) => void
-  onRestoreThreat: (componentThreatId: string) => void
+  onUpdateTriageStatus: (componentThreatId: string, triageStatus: TriageStatus, decisionRationale?: string) => void
   onAddCustomCountermeasure: () => void
   onCountermeasurePriorityChange: (
     componentThreatId: string,
@@ -130,7 +143,7 @@ function getComponentThreatSummary(
   threats: ComponentThreat[]
 ): { total: number; exposed: number; addressable: number; mitigated: number } {
   const componentThreats = threats.filter(
-    (t) => t.componentId === componentId && !t.dismissed
+    (t) => t.componentId === componentId && isActiveThreat(t.triageStatus)
   )
 
   let exposed = 0
@@ -175,8 +188,7 @@ export function ComponentView({
   onAssignOwner,
   onAddComponent,
   onAddCustomThreat,
-  onDismissThreat,
-  onRestoreThreat,
+  onUpdateTriageStatus,
   onAddCustomCountermeasure,
   onCountermeasurePriorityChange,
   onCountermeasureDueDateChange,
@@ -186,7 +198,10 @@ export function ComponentView({
   onReorderCountermeasures,
   isSecurityTeam,
 }: ComponentViewProps) {
-  const [showDismissedThreats, setShowDismissedThreats] = useState(false)
+  const [showTriagedThreats, setShowTriagedThreats] = useState(false)
+  // Track pending decision rationale for triage status changes
+  const [pendingTriageFor, setPendingTriageFor] = useState<{ threatId: string; status: TriageStatus } | null>(null)
+  const [triageRationale, setTriageRationale] = useState('')
   // Track which countermeasure is being assigned an owner (by countermeasure instance id)
   const [assigningOwnerFor, setAssigningOwnerFor] = useState<string | null>(null)
   // Track if we should set status to "planned" after owner assignment
@@ -225,6 +240,19 @@ export function ComponentView({
     id: number
     name: string
   } | null>(null)
+  const [deleteThreatConfirmFor, setDeleteThreatConfirmFor] = useState<{
+    backendId: number
+    name: string
+    threatType: 'component' | 'dataflow'
+  } | null>(null)
+  const [editingThreatFor, setEditingThreatFor] = useState<{
+    backendId: number
+    threatType: 'component' | 'dataflow'
+    name: string
+    description: string
+  } | null>(null)
+  const [editThreatName, setEditThreatName] = useState('')
+  const [editThreatDescription, setEditThreatDescription] = useState('')
 
   // Resolve technology slugs to display names
   const { technologies } = useTechnologies()
@@ -245,6 +273,7 @@ export function ComponentView({
   const deleteCountermeasureMutation = useDeleteCountermeasure()
   const unlinkCountermeasureMutation = useUnlinkCountermeasure()
   const deleteComponentMutation = useDeleteComponent()
+  const deleteThreatMutation = useDeleteThreat()
 
   // Refs to collect latest data from child panels
   const severityDataRef = useRef<SeverityAssessmentData | null>(null)
@@ -270,7 +299,25 @@ export function ComponentView({
       updateThreatMutation.mutate({ threatId: threat.backendThreatId, data }, { onSuccess, onError })
     }
   }, [updateThreatMutation, updateFlowThreatMutation])
-  
+
+  const handleSaveEditThreat = useCallback(() => {
+    if (!editingThreatFor || !editThreatName.trim()) return
+    const data: Record<string, unknown> = {
+      threatName: editThreatName.trim(),
+      threatDescription: editThreatDescription.trim(),
+    }
+    const onSuccess = () => {
+      toast.success('Threat updated')
+      setEditingThreatFor(null)
+    }
+    const onError = () => { toast.error('Failed to update threat') }
+    if (editingThreatFor.threatType === 'dataflow') {
+      updateFlowThreatMutation.mutate({ threatId: editingThreatFor.backendId, data }, { onSuccess, onError })
+    } else {
+      updateThreatMutation.mutate({ threatId: editingThreatFor.backendId, data }, { onSuccess, onError })
+    }
+  }, [editingThreatFor, editThreatName, editThreatDescription, updateThreatMutation, updateFlowThreatMutation])
+
   // Unified delete/unlink handler for countermeasures
   const handleConfirmDeleteCountermeasure = useCallback(() => {
     if (!deleteCountermeasureConfirmFor) return
@@ -312,6 +359,23 @@ export function ComponentView({
 
     deleteComponentMutation.mutate(deleteComponentConfirmFor.id, { onSuccess, onError })
   }, [deleteComponentConfirmFor, deleteComponentMutation])
+
+  const handleConfirmDeleteThreat = useCallback(() => {
+    if (!deleteThreatConfirmFor) return
+
+    deleteThreatMutation.mutate(
+      { threatId: deleteThreatConfirmFor.backendId, threatType: deleteThreatConfirmFor.threatType },
+      {
+        onSuccess: () => {
+          toast.success('Threat deleted')
+          setDeleteThreatConfirmFor(null)
+        },
+        onError: () => {
+          toast.error('Failed to delete threat')
+        },
+      }
+    )
+  }, [deleteThreatConfirmFor, deleteThreatMutation])
 
   // Fetch threat personas for the threat model
   const { data: threatPersonas = [] } = useThreatPersonas(threatModelId)
@@ -401,10 +465,10 @@ export function ComponentView({
   }, [componentThreats, selectedComponentId])
 
   const activeThreats = useMemo(
-    () => threatsForComponent.filter((t) => !t.dismissed).sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    () => threatsForComponent.filter((t) => isActiveThreat(t.triageStatus)).sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
     [threatsForComponent]
   )
-  const dismissedThreats = threatsForComponent.filter((t) => t.dismissed)
+  const triagedThreats = threatsForComponent.filter((t) => !isActiveThreat(t.triageStatus))
 
   // Selected threat already contains metadata from backend
   const selectedThreatDef = selectedComponentThreat
@@ -480,12 +544,12 @@ export function ComponentView({
             {analyzableComponents.length} components &nbsp;|&nbsp;{' '}
             {trustZones.length} zones &nbsp;|&nbsp;{' '}
             {dataFlows.length} flows &nbsp;|&nbsp;{' '}
-            {componentThreats.filter((t) => !t.dismissed).length} threats
+            {componentThreats.filter((t) => isActiveThreat(t.triageStatus)).length} threats
           </div>
           {(() => {
             const summary = componentThreats.reduce(
               (acc, t) => {
-                if (t.dismissed) return acc
+                if (!isActiveThreat(t.triageStatus)) return acc
                 const status = deriveThreatStatus(t.countermeasures)
                 if (status === 'exposed') acc.exposed++
                 else if (status === 'addressable') acc.addressable++
@@ -787,7 +851,7 @@ export function ComponentView({
             {activeThreats.length > 0 && (
               <div>
                 <p className="text-xs text-muted-foreground px-2 py-1 mb-1">
-                  Cross out threats that are not relevant
+                  Triage or delete threats that are not relevant
                 </p>
 
                 <SortableList
@@ -816,7 +880,7 @@ export function ComponentView({
                         <div className="flex items-center gap-1">
                           <div
                             ref={dragHandleRef}
-                            className="flex-shrink-0 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="flex-shrink-0 cursor-grab opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity"
                           >
                             <GripVertical className="h-4 w-4 text-muted-foreground" />
                           </div>
@@ -843,18 +907,68 @@ export function ComponentView({
                             )}
                           </div>
                           <ThreatStatusBadge status={status} />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-muted-foreground hover:text-destructive flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDismissThreat(ct.id)
+                          <Select
+                            value={ct.triageStatus}
+                            onValueChange={(value: string) => {
+                              const newStatus = value as TriageStatus
+                              if (newStatus === 'accept' || newStatus === 'delegate' || newStatus === 'eliminate') {
+                                setPendingTriageFor({ threatId: ct.id, status: newStatus })
+                                setTriageRationale('')
+                              } else {
+                                onUpdateTriageStatus(ct.id, newStatus)
+                              }
                             }}
-                            title="Dismiss threat"
                           >
-                            <X className="h-3 w-3" />
-                          </Button>
+                            <SelectTrigger className="h-6 w-[100px] text-xs flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TRIAGE_STATUSES.map((s) => (
+                                <SelectItem key={s.value} value={s.value} className="text-xs">
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {ct.backendThreatId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingThreatFor({
+                                  backendId: ct.backendThreatId!,
+                                  threatType: ct.threatType === 'dataflow' ? 'dataflow' : 'component',
+                                  name: ct.threatName || '',
+                                  description: ct.threatDescription || '',
+                                })
+                                setEditThreatName(ct.threatName || '')
+                                setEditThreatDescription(ct.threatDescription || '')
+                              }}
+                              title="Edit threat"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {ct.backendThreatId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteThreatConfirmFor({
+                                  backendId: ct.backendThreatId!,
+                                  name: ct.threatName || 'this threat',
+                                  threatType: ct.threatType || 'component',
+                                })
+                              }}
+                              title="Delete threat"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                         {isSelected && (
                           <div className="mt-1 ml-4 flex items-center gap-1">
@@ -878,6 +992,53 @@ export function ComponentView({
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
+                          </div>
+                        )}
+                        {pendingTriageFor?.threatId === ct.id && (
+                          <div className="mt-2 ml-4 p-2 rounded-md bg-amber-50 border border-amber-200 space-y-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="text-xs font-medium text-amber-800">
+                              Provide rationale for {TRIAGE_STATUSES.find((s) => s.value === pendingTriageFor.status)?.label}:
+                            </div>
+                            <input
+                              type="text"
+                              value={triageRationale}
+                              onChange={(e) => setTriageRationale(e.target.value)}
+                              placeholder="Why is this the right decision?"
+                              className="w-full h-8 px-2 text-sm border rounded bg-background"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && triageRationale.trim()) {
+                                  onUpdateTriageStatus(ct.id, pendingTriageFor.status, triageRationale.trim())
+                                  setPendingTriageFor(null)
+                                  setTriageRationale('')
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                disabled={!triageRationale.trim()}
+                                onClick={() => {
+                                  onUpdateTriageStatus(ct.id, pendingTriageFor.status, triageRationale.trim())
+                                  setPendingTriageFor(null)
+                                  setTriageRationale('')
+                                }}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setPendingTriageFor(null)
+                                  setTriageRationale('')
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         )}
                         {isSelected && (
@@ -913,45 +1074,45 @@ export function ComponentView({
             )}
 
             {/* Empty state */}
-            {selectedComponentId && activeThreats.length === 0 && dismissedThreats.length === 0 && (
+            {selectedComponentId && activeThreats.length === 0 && triagedThreats.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <p className="text-sm">No threats available for this component.</p>
               </div>
             )}
 
-            {/* All threats dismissed state */}
-            {selectedComponentId && activeThreats.length === 0 && dismissedThreats.length > 0 && (
+            {/* All threats triaged away state */}
+            {selectedComponentId && activeThreats.length === 0 && triagedThreats.length > 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">All threats have been dismissed.</p>
-                <p className="text-xs mt-1">Restore from the section below if needed.</p>
+                <p className="text-sm">All threats have been triaged.</p>
+                <p className="text-xs mt-1">Reopen from the section below if needed.</p>
               </div>
             )}
 
-            {/* Dismissed threats section */}
-            {selectedComponentId && dismissedThreats.length > 0 && (
+            {/* Triaged threats section */}
+            {selectedComponentId && triagedThreats.length > 0 && (
               <div className="mt-4 pt-3 border-t">
                 <button
                   className="w-full flex items-center justify-between px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowDismissedThreats(!showDismissedThreats)}
+                  onClick={() => setShowTriagedThreats(!showTriagedThreats)}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Dismissed</span>
+                    <span className="font-medium">Triaged Threats</span>
                     <Badge variant="outline" className="text-xs bg-slate-100">
-                      {dismissedThreats.length}
+                      {triagedThreats.length}
                     </Badge>
                   </div>
-                  {showDismissedThreats ? (
+                  {showTriagedThreats ? (
                     <ChevronUp className="h-4 w-4" />
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
                 </button>
 
-                {showDismissedThreats && (
+                {showTriagedThreats && (
                   <div className="mt-2 space-y-1">
-                    {dismissedThreats.map((ct) => {
-                      // Use threat metadata from backend (stored in ComponentThreat)
+                    {triagedThreats.map((ct) => {
                       if (!ct.threatName) return null
+                      const statusLabel = TRIAGE_STATUSES.find((s) => s.value === ct.triageStatus)?.label || ct.triageStatus
 
                       return (
                         <div
@@ -959,9 +1120,19 @@ export function ComponentView({
                           className="group flex items-center justify-between gap-2 px-2 py-2 rounded-md hover:bg-slate-50"
                         >
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm text-muted-foreground line-through truncate block">
-                              {ct.threatName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground line-through truncate">
+                                {ct.threatName}
+                              </span>
+                              <Badge variant="outline" className={cn('text-[10px]', TRIAGE_STATUS_COLORS[ct.triageStatus])}>
+                                {statusLabel}
+                              </Badge>
+                            </div>
+                            {ct.decisionRationale && (
+                              <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
+                                {ct.decisionRationale}
+                              </p>
+                            )}
                             <TaxonomyBadges entries={ct.taxonomyEntries} maxVisible={1} size="sm" />
                           </div>
                           <div className="flex items-center gap-1">
@@ -969,9 +1140,9 @@ export function ComponentView({
                               variant="ghost"
                               size="sm"
                               className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => onRestoreThreat(ct.id)}
+                              onClick={() => onUpdateTriageStatus(ct.id, 'open')}
                             >
-                              Restore
+                              Reopen
                             </Button>
                           </div>
                         </div>
@@ -1074,7 +1245,7 @@ export function ComponentView({
                         <div className="flex items-center gap-2">
                           <div
                             ref={dragHandleRef}
-                            className="flex-shrink-0 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="flex-shrink-0 cursor-grab opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity"
                           >
                             <GripVertical className="h-4 w-4 text-muted-foreground" />
                           </div>
@@ -1095,7 +1266,7 @@ export function ComponentView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation()
                               const parsed = parseCountermeasureId(cm.id)
@@ -1116,6 +1287,25 @@ export function ComponentView({
                           </Button>
                         )}
                       </div>
+
+                      {/* Control function & nature */}
+                      {((cm.controlFunctions && cm.controlFunctions.length > 0) || cm.controlNature) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {cm.controlFunctions?.map((fn) => {
+                            const label = CONTROL_FUNCTIONS.find((f) => f.value === fn)?.label || fn
+                            return (
+                              <Badge key={fn} variant="outline" className="text-xs capitalize">
+                                {label}
+                              </Badge>
+                            )
+                          })}
+                          {cm.controlNature && (
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {CONTROL_NATURES.find((n) => n.value === cm.controlNature)?.label || cm.controlNature}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
 
                       {/* Compliance mappings - expandable detail */}
                       {cm.standardMappings && cm.standardMappings.length > 0 ? (
@@ -1472,6 +1662,94 @@ export function ComponentView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteThreatConfirmFor}
+        onOpenChange={(open) => {
+          if (!open) setDeleteThreatConfirmFor(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete threat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deleteThreatConfirmFor?.name}" and all of its countermeasures.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteThreatMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDeleteThreat()
+              }}
+              disabled={deleteThreatMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteThreatMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Threat Dialog */}
+      <Dialog
+        open={!!editingThreatFor}
+        onOpenChange={(open) => {
+          if (!open) setEditingThreatFor(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Threat</DialogTitle>
+            <DialogDescription>Update the threat name and description.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-threat-name">Threat Name *</Label>
+              <Input
+                id="edit-threat-name"
+                value={editThreatName}
+                onChange={(e) => setEditThreatName(e.target.value)}
+                placeholder="Threat name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-threat-description">Description</Label>
+              <Textarea
+                id="edit-threat-description"
+                value={editThreatDescription}
+                onChange={(e) => setEditThreatDescription(e.target.value)}
+                placeholder="Describe the threat..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingThreatFor(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditThreat}
+              disabled={!editThreatName.trim() || updateThreatMutation.isPending || updateFlowThreatMutation.isPending}
+            >
+              {(updateThreatMutation.isPending || updateFlowThreatMutation.isPending) ? (
+                <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Saving...</>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

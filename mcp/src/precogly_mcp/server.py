@@ -226,24 +226,29 @@ async def search_threat_library(
 async def search_countermeasure_library(
     ctx: Context[ReaderFor, Any],
     query: str | None = None,
-    control_type: str | None = None,
+    control_function: str | None = None,
+    control_nature: str | None = None,
     cost: Literal["low", "medium", "high"] | None = None,
 ) -> LibraryCountermeasureMatches:
     """Search the shared catalog of library countermeasures.
 
     These are control templates from installed packs, shared across every organization.
     They are not the countermeasures applied to any threat model, and carry no
-    implementation status — `default_status` is the state a countermeasure starts in
+    implementation status. `default_status` is the state a countermeasure starts in
     when it is applied.
 
     `query` matches the name only. The listing does not return a description, so there
     is nothing else to match: a control whose name does not mention the mechanism will
     not be found by searching for the mechanism, and an empty result does not mean no
-    such control exists. Narrow by `control_type` and `cost` instead, or omit `query`
-    and read all of them — the catalog runs to tens of controls, not hundreds.
+    such control exists. Narrow by `control_function`, `control_nature`, and `cost`
+    instead, or omit `query` and read all of them. The catalog runs to tens of
+    controls, not hundreds.
 
-    `control_type` is `preventive`, `detective` or `corrective` on a stock
-    installation, matched in full. It is open-ended upstream, so a pack can add to it.
+    `control_function` matches any entry in the countermeasure's `control_functions`
+    list (e.g. `preventive`, `detective`, `corrective`). A single countermeasure can
+    have multiple functions.
+
+    `control_nature` is `technical`, `administrative`, or `physical`.
 
     `matched` and `catalogSize` come back beside the rows. Read them for "how many"
     rather than counting the entries.
@@ -257,8 +262,15 @@ async def search_countermeasure_library(
         for countermeasure in countermeasures
         if (query is None or _matches(query, countermeasure.name))
         and (
-            control_type is None
-            or countermeasure.control_type.casefold() == control_type.casefold()
+            control_function is None
+            or any(
+                fn.casefold() == control_function.casefold()
+                for fn in countermeasure.control_functions
+            )
+        )
+        and (
+            control_nature is None
+            or countermeasure.control_nature.casefold() == control_nature.casefold()
         )
         and (cost is None or countermeasure.cost == cost)
     ]

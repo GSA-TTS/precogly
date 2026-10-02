@@ -9,7 +9,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils.text import slugify
 from django.utils.timezone import now
-from rest_framework.exceptions import ValidationError
 
 from .base import BaseAdapter
 from .cyclonedx_bom_ref import BomRefResolver
@@ -30,6 +29,12 @@ logger = logging.getLogger(__name__)
 PRECOGLY_VERSION = getattr(settings, "PRECOGLY_VERSION", "0.1.0")
 
 
+class TmBomImportError(Exception):
+    """User-facing import error with actionable detail."""
+
+    pass
+
+
 class CycloneDxAdapter(BaseAdapter):
     """CycloneDX 2.0 TM-BOM import/export adapter."""
 
@@ -42,13 +47,29 @@ class CycloneDxAdapter(BaseAdapter):
         warnings = []
 
         if not isinstance(json_data, dict):
-            raise ValidationError({"detail": "Input must be a JSON object."})
+            raise TmBomImportError(
+                "The uploaded file does not contain a JSON object. "
+                "CycloneDX TM-BOM files must be a JSON object at the top level."
+            )
 
-        if json_data.get("specFormat") != "CycloneDX":
-            raise ValidationError({"detail": 'specFormat must be "CycloneDX".'})
+        spec_format = json_data.get("specFormat")
+        if spec_format != "CycloneDX":
+            if spec_format:
+                raise TmBomImportError(
+                    f"This file has specFormat '{spec_format}' but expected "
+                    f"'CycloneDX'. Make sure you are uploading a CycloneDX "
+                    f"TM-BOM file."
+                )
+            raise TmBomImportError(
+                "This file is missing the 'specFormat' field. "
+                "CycloneDX TM-BOM files must have specFormat set to 'CycloneDX'."
+            )
         spec_version = json_data.get("specVersion", "")
         if not spec_version.startswith("2."):
-            raise ValidationError({"detail": "specVersion must be 2.x."})
+            raise TmBomImportError(
+                f"Unsupported CycloneDX version '{spec_version}'. "
+                f"Only version 2.x files are supported."
+            )
 
         blueprints = json_data.get("blueprints", [])
         if not blueprints:
@@ -671,6 +692,25 @@ class CycloneDxAdapter(BaseAdapter):
                 if inst.access_level:
                     scenario["accessLevel"] = inst.access_level
 
+                # Triage status
+                scenario_props = []
+                if inst.triage_status != "open":
+                    scenario_props.append(
+                        {
+                            "name": "precogly:threat-status",
+                            "value": inst.triage_status,
+                        }
+                    )
+                if inst.decision_rationale:
+                    scenario_props.append(
+                        {
+                            "name": "precogly:decision-rationale",
+                            "value": inst.decision_rationale,
+                        }
+                    )
+                if scenario_props:
+                    scenario["properties"] = scenario_props
+
                 # Re-emit Tier 3 scenario data
                 cdx_meta = inst.format_metadata.get("cyclonedx", {})
                 scenario_meta = cdx_meta.get("scenario", {})
@@ -881,13 +921,32 @@ class CycloneDxAdapter(BaseAdapter):
             if description:
                 control["description"] = description
 
-            control_type = cm.control_type or (
-                cm.countermeasure_library.control_type
+            control_functions = cm.control_functions or (
+                cm.countermeasure_library.control_functions
+                if cm.countermeasure_library
+                else []
+            )
+            control_nature = cm.control_nature or (
+                cm.countermeasure_library.control_nature
                 if cm.countermeasure_library
                 else ""
             )
-            if control_type:
-                control["category"] = control_type
+            if control_functions:
+                control["category"] = control_functions[0]
+            props = []
+            if control_functions:
+                props.append(
+                    {
+                        "name": "precogly:control-functions",
+                        "value": ",".join(control_functions),
+                    }
+                )
+            if control_nature:
+                props.append(
+                    {"name": "precogly:control-nature", "value": control_nature}
+                )
+            if props:
+                control["properties"] = props
 
             if cm.effectiveness is not None:
                 control["effectiveness"] = {
@@ -945,28 +1004,51 @@ class CycloneDxAdapter(BaseAdapter):
         definitions = json_data.get("definitions", {})
 
         # 1. ThreatModel
-        threat_model = self._import_threat_model(
-            blueprint, json_data, organization, created_by
-        )
+        try:
+            threat_model = self._import_threat_model(
+                blueprint, json_data, organization, created_by
+            )
+        except Exception as e:
+            raise TmBomImportError(f"Failed to create threat model: {e}") from e
         summary["threat_model"] = 1
 
         # 2. Orgsystem
-        orgsystem = self._import_orgsystem(blueprint, threat_model, organization)
+        try:
+            orgsystem = self._import_orgsystem(blueprint, threat_model, organization)
+        except Exception as e:
+            raise TmBomImportError(f"Failed to create system: {e}") from e
         summary["orgsystems"] = 1
 
         # 3. Zones
         for zone_data in blueprint.get("zones", []):
-            self._import_zone(zone_data, resolver, organization)
+            zone_name = zone_data.get("name", zone_data.get("bom-ref", "unknown"))
+            try:
+                self._import_zone(zone_data, resolver, organization)
+            except Exception as e:
+                raise TmBomImportError(
+                    f"Failed to import trust zone '{zone_name}': {e}. "
+                    f"Check that the zone definition is complete."
+                ) from e
             summary["zones"] += 1
 
         # 4. Boundaries (depends on zones)
         for boundary_data in blueprint.get("boundaries", []):
-            self._import_boundary(boundary_data, resolver, organization)
-            summary["boundaries"] += 1
+            result = self._import_boundary(
+                boundary_data, resolver, organization, warnings
+            )
+            if result:
+                summary["boundaries"] += 1
 
         # 5. Assets -> OrgsystemComponent
         for asset_data in blueprint.get("assets", []):
-            self._import_asset(asset_data, orgsystem, threat_model, resolver)
+            asset_name = asset_data.get("name", asset_data.get("bom-ref", "unknown"))
+            try:
+                self._import_asset(asset_data, orgsystem, threat_model, resolver)
+            except Exception as e:
+                raise TmBomImportError(
+                    f"Failed to import asset '{asset_name}': {e}. "
+                    f"Check the asset type and zone reference."
+                ) from e
             summary["components"] += 1
 
         # 6. DataStores -> merge into components
@@ -978,10 +1060,29 @@ class CycloneDxAdapter(BaseAdapter):
             self._import_data_set(dataset_data, threat_model, resolver)
             summary["data_assets"] += 1
 
+        # 7.5 Assumptions
+        assumptions_data = blueprint.get("assumptions", [])
+        if assumptions_data:
+            imported_assumptions = []
+            for assumption in assumptions_data:
+                imported_assumptions.append(
+                    {
+                        "id": assumption.get("bom-ref", ""),
+                        "description": assumption.get("description", ""),
+                        "validity": assumption.get("validity", "unconfirmed"),
+                        "topics": (
+                            [assumption["topic"]] if assumption.get("topic") else []
+                        ),
+                    }
+                )
+            threat_model.assumptions = imported_assumptions
+            threat_model.save(update_fields=["assumptions"])
+
         # 8. Flows -> DataFlow
         for flow_data in blueprint.get("flows", []):
-            self._import_flow(flow_data, threat_model, resolver)
-            summary["flows"] += 1
+            result = self._import_flow(flow_data, threat_model, resolver, warnings)
+            if result:
+                summary["flows"] += 1
 
         # 9. Use cases from definitions
         for uc_data in definitions.get("useCases", []):
@@ -990,7 +1091,17 @@ class CycloneDxAdapter(BaseAdapter):
 
         # 10. Controls -> InstanceCountermeasure
         for control_data in json_data.get("controls", []):
-            self._import_control(control_data, threat_model, resolver)
+            control_name = control_data.get(
+                "name", control_data.get("bom-ref", "unknown")
+            )
+            try:
+                self._import_control(control_data, threat_model, resolver, warnings)
+            except TmBomImportError:
+                raise
+            except Exception as e:
+                raise TmBomImportError(
+                    f"Failed to import control '{control_name}': {e}"
+                ) from e
             summary["controls"] += 1
 
         # 11. Threats -> ThreatLibrary
@@ -1012,7 +1123,7 @@ class CycloneDxAdapter(BaseAdapter):
 
         # 12. Scenarios -> instance threats
         for scenario_data in threats_block.get("scenarios", []):
-            self._import_scenario(scenario_data, threat_model, resolver)
+            self._import_scenario(scenario_data, threat_model, resolver, warnings)
             summary["scenarios"] += 1
 
         # 13. Risks
@@ -1021,11 +1132,11 @@ class CycloneDxAdapter(BaseAdapter):
             self._import_risk(risk_data, threat_model, resolver)
             summary["risks"] += 1
 
-        # 13. Resolve control → threat links from mitigations
+        # 14. Resolve control -> threat links from mitigations
         self._resolve_control_threat_links(threats_block, threat_model, resolver)
 
-        # 14. Tier 3 passthrough
-        self._store_tier3_data(threat_model, json_data, blueprint, resolver)
+        # 15. Tier 3 passthrough
+        self._store_tier3_data(threat_model, json_data, blueprint, resolver, warnings)
 
         if warnings:
             summary["warnings"] = warnings
@@ -1080,13 +1191,13 @@ class CycloneDxAdapter(BaseAdapter):
             organization=organization,
             name=name,
             description=zone_data.get("description", ""),
-            trust_level=zone_data.get("trustLevel"),
+            trust_level=zone_data.get("trustLevel") or 50,
             parent=parent,
         )
         resolver.register("zone", bom_ref, zone)
         return zone
 
-    def _import_boundary(self, boundary_data, resolver, organization):
+    def _import_boundary(self, boundary_data, resolver, organization, warnings):
         from apps.systems.models import TrustBoundary
 
         bom_ref = boundary_data.get("bom-ref", "")
@@ -1095,10 +1206,13 @@ class CycloneDxAdapter(BaseAdapter):
         zone_b = resolver.resolve("zone", zone_refs[1]) if len(zone_refs) > 1 else None
 
         if not zone_a or not zone_b:
-            logger.warning(
-                "Boundary '%s' references unknown zones, skipping.",
-                boundary_data.get("name", bom_ref),
+            msg = (
+                f"Boundary '{boundary_data.get('name', bom_ref)}' references "
+                f"unknown zones and was skipped. "
+                f"Check that the zones it connects are defined earlier in the file."
             )
+            logger.warning(msg)
+            warnings.append(msg)
             return None
 
         crossing = boundary_data.get("crossingRequirements", {})
@@ -1240,7 +1354,7 @@ class CycloneDxAdapter(BaseAdapter):
         resolver.register("dataset", bom_ref, data_asset)
         return data_asset
 
-    def _import_flow(self, flow_data, threat_model, resolver):
+    def _import_flow(self, flow_data, threat_model, resolver, warnings):
         from apps.systems.models import DataFlow
 
         bom_ref = flow_data.get("bom-ref", "")
@@ -1251,12 +1365,18 @@ class CycloneDxAdapter(BaseAdapter):
         dest = resolver.resolve("asset", dest_ref) if dest_ref else None
 
         if not source or not dest:
-            logger.warning(
-                "Flow '%s' references unknown assets (source=%s, dest=%s), skipping.",
-                flow_data.get("name", bom_ref),
-                source_ref,
-                dest_ref,
+            missing = []
+            if not source:
+                missing.append(f"source '{source_ref}'")
+            if not dest:
+                missing.append(f"destination '{dest_ref}'")
+            msg = (
+                f"Data flow '{flow_data.get('name', bom_ref)}' was skipped "
+                f"because {' and '.join(missing)} could not be resolved. "
+                f"Check that the referenced assets are defined in the file."
             )
+            logger.warning(msg)
+            warnings.append(msg)
             return None
 
         protocols = flow_data.get("protocols", [])
@@ -1302,7 +1422,7 @@ class CycloneDxAdapter(BaseAdapter):
         resolver.register("usecase", bom_ref, use_case)
         return use_case
 
-    def _import_control(self, control_data, threat_model, resolver):
+    def _import_control(self, control_data, threat_model, resolver, warnings):
         from apps.threats.models import InstanceCountermeasure
 
         bom_ref = control_data.get("bom-ref", "")
@@ -1311,17 +1431,34 @@ class CycloneDxAdapter(BaseAdapter):
         valid_statuses = {c[0] for c in InstanceCountermeasure.Status.choices}
         status = CDX_STATUS_TO_CONTROL.get(cdx_status, "gap")
         if status not in valid_statuses:
-            logger.warning(
-                "CycloneDX status '%s' mapped to invalid status '%s', defaulting to 'gap'.",
-                cdx_status,
-                status,
+            msg = (
+                f"Control '{name}': unrecognized status '{cdx_status}', "
+                f"defaulting to 'gap'."
             )
+            logger.warning(msg)
+            warnings.append(msg)
             status = "gap"
 
         effectiveness = None
         eff_data = control_data.get("effectiveness", {})
         if isinstance(eff_data, dict) and "percentage" in eff_data:
             effectiveness = eff_data["percentage"]
+
+        # Extract control_functions and control_nature from properties
+        control_functions = []
+        control_nature = ""
+        for prop in control_data.get("properties", []):
+            prop_name = prop.get("name", "")
+            if prop_name == "precogly:control-functions":
+                control_functions = [
+                    v.strip() for v in prop.get("value", "").split(",") if v.strip()
+                ]
+            elif prop_name == "precogly:control-nature":
+                control_nature = prop.get("value", "")
+        if not control_functions:
+            category = control_data.get("category", "")
+            if category:
+                control_functions = [category]
 
         # Store original status in format_metadata if it maps lossy
         cdx_meta = {"bom_ref": bom_ref}
@@ -1332,7 +1469,8 @@ class CycloneDxAdapter(BaseAdapter):
             threat_model=threat_model,
             countermeasure_name=name,
             countermeasure_description=control_data.get("description", ""),
-            control_type=control_data.get("category", ""),
+            control_functions=control_functions,
+            control_nature=control_nature,
             status=status,
             effectiveness=effectiveness,
             format_metadata={"cyclonedx": cdx_meta},
@@ -1370,6 +1508,21 @@ class CycloneDxAdapter(BaseAdapter):
         )
         resolver.register("threat", bom_ref, threat_lib)
 
+        self._import_threat_categories(threat_data, threat_lib)
+
+        # Store triage properties for scenario import to pick up
+        triage_status = "open"
+        decision_rationale = ""
+        for prop in threat_data.get("properties", []):
+            prop_name = prop.get("name", "")
+            if prop_name == "precogly:threat-status":
+                triage_status = prop.get("value", "open")
+            elif prop_name == "precogly:decision-rationale":
+                decision_rationale = prop.get("value", "")
+        if triage_status != "open" or decision_rationale:
+            threat_lib._triage_status = triage_status
+            threat_lib._decision_rationale = decision_rationale
+
         # If no scenarios reference this threat, create instance threats
         # directly from affectedAssets
         if bom_ref not in scenario_threat_refs:
@@ -1382,6 +1535,35 @@ class CycloneDxAdapter(BaseAdapter):
                     resolver,
                     warnings,
                 )
+
+    def _import_threat_categories(self, threat_data, threat_lib):
+        """Parse CycloneDX categories and create taxonomy entries via get_or_create."""
+        from apps.threats.models import (
+            ExternalTaxonomy,
+            TaxonomyEntry,
+            ThreatLibraryTaxonomyEntry,
+        )
+
+        for category in threat_data.get("categories", []):
+            taxonomy_slug = category.get("taxonomy", "")
+            external_id = category.get("id", "")
+            entry_name = category.get("name", external_id)
+            if not taxonomy_slug or not external_id:
+                continue
+
+            taxonomy, _ = ExternalTaxonomy.objects.get_or_create(
+                slug=taxonomy_slug,
+                defaults={"name": taxonomy_slug.upper()},
+            )
+            entry, _ = TaxonomyEntry.objects.get_or_create(
+                taxonomy=taxonomy,
+                external_id=external_id,
+                defaults={"title": entry_name},
+            )
+            ThreatLibraryTaxonomyEntry.objects.get_or_create(
+                threat_library=threat_lib,
+                taxonomy_entry=entry,
+            )
 
     def _create_instance_threat_from_abstract(
         self,
@@ -1402,33 +1584,36 @@ class CycloneDxAdapter(BaseAdapter):
             "flow", asset_ref
         )
         if not target:
-            logger.warning(
-                "Threat '%s' references unknown asset '%s'.",
-                threat_lib.name,
-                asset_ref,
+            msg = (
+                f"Threat '{threat_lib.name}' references unknown asset '{asset_ref}' "
+                f"and the link was skipped."
             )
+            logger.warning(msg)
+            warnings.append(msg)
             return
+
+        defaults = {
+            "threat_name": threat_lib.name,
+            "threat_description": threat_lib.description,
+            "inherent_severity": "medium",
+        }
+        if hasattr(threat_lib, "_triage_status"):
+            defaults["triage_status"] = threat_lib._triage_status
+        if hasattr(threat_lib, "_decision_rationale"):
+            defaults["decision_rationale"] = threat_lib._decision_rationale
 
         created = False
         if isinstance(target, OrgsystemComponent):
             _, created = ComponentInstanceThreat.objects.get_or_create(
                 component=target,
                 threat_library=threat_lib,
-                defaults={
-                    "threat_name": threat_lib.name,
-                    "threat_description": threat_lib.description,
-                    "inherent_severity": "medium",
-                },
+                defaults=defaults,
             )
         elif isinstance(target, DataFlow):
             _, created = DataFlowInstanceThreat.objects.get_or_create(
                 data_flow=target,
                 threat_library=threat_lib,
-                defaults={
-                    "threat_name": threat_lib.name,
-                    "threat_description": threat_lib.description,
-                    "inherent_severity": "medium",
-                },
+                defaults=defaults,
             )
 
         if not created and target:
@@ -1439,7 +1624,7 @@ class CycloneDxAdapter(BaseAdapter):
             logger.warning(msg)
             warnings.append(msg)
 
-    def _import_scenario(self, scenario_data, threat_model, resolver):
+    def _import_scenario(self, scenario_data, threat_model, resolver, warnings):
         from apps.systems.models import DataFlow, OrgsystemComponent
         from apps.threats.models import (
             ComponentInstanceThreat,
@@ -1458,6 +1643,21 @@ class CycloneDxAdapter(BaseAdapter):
         intent = scenario_data.get("intent", "")
         access_level = scenario_data.get("accessLevel", "")
 
+        # Triage status from scenario properties or abstract threat
+        triage_status = "open"
+        decision_rationale = ""
+        for prop in scenario_data.get("properties", []):
+            prop_name = prop.get("name", "")
+            if prop_name == "precogly:threat-status":
+                triage_status = prop.get("value", "open")
+            elif prop_name == "precogly:decision-rationale":
+                decision_rationale = prop.get("value", "")
+        if triage_status == "open" and threat_lib:
+            triage_status = getattr(threat_lib, "_triage_status", "open")
+            decision_rationale = decision_rationale or getattr(
+                threat_lib, "_decision_rationale", ""
+            )
+
         # Tier 3 scenario metadata
         scenario_meta = {}
         for key in ("motivation", "attackVector", "exploitability"):
@@ -1469,39 +1669,42 @@ class CycloneDxAdapter(BaseAdapter):
                 "flow", asset_ref
             )
             if not target:
-                logger.warning(
-                    "Scenario '%s' references unknown asset '%s'.",
-                    bom_ref,
-                    asset_ref,
+                msg = (
+                    f"Scenario '{bom_ref}' references unknown asset '{asset_ref}' "
+                    f"and the link was skipped."
                 )
+                logger.warning(msg)
+                warnings.append(msg)
                 continue
 
             cdx_meta = {"scenario_bom_ref": bom_ref}
             if scenario_meta:
                 cdx_meta["scenario"] = scenario_meta
 
+            instance_kwargs = {
+                "threat_library": threat_lib,
+                "threat_name": threat_lib.name if threat_lib else "",
+                "threat_description": (threat_lib.description if threat_lib else ""),
+                "inherent_severity": severity,
+                "intent": intent,
+                "access_level": access_level,
+                "format_metadata": {"cyclonedx": cdx_meta},
+            }
+            if triage_status != "open":
+                instance_kwargs["triage_status"] = triage_status
+            if decision_rationale:
+                instance_kwargs["decision_rationale"] = decision_rationale
+
             if isinstance(target, OrgsystemComponent):
                 instance = ComponentInstanceThreat.objects.create(
                     component=target,
-                    threat_library=threat_lib,
-                    threat_name=threat_lib.name if threat_lib else "",
-                    threat_description=(threat_lib.description if threat_lib else ""),
-                    inherent_severity=severity,
-                    intent=intent,
-                    access_level=access_level,
-                    format_metadata={"cyclonedx": cdx_meta},
+                    **instance_kwargs,
                 )
                 resolver.register("scenario", bom_ref, instance)
             elif isinstance(target, DataFlow):
                 instance = DataFlowInstanceThreat.objects.create(
                     data_flow=target,
-                    threat_library=threat_lib,
-                    threat_name=threat_lib.name if threat_lib else "",
-                    threat_description=(threat_lib.description if threat_lib else ""),
-                    inherent_severity=severity,
-                    intent=intent,
-                    access_level=access_level,
-                    format_metadata={"cyclonedx": cdx_meta},
+                    **instance_kwargs,
                 )
                 resolver.register("scenario", bom_ref, instance)
 
@@ -1668,7 +1871,7 @@ class CycloneDxAdapter(BaseAdapter):
                         flow_threat=ft,
                     )
 
-    def _store_tier3_data(self, threat_model, json_data, blueprint, resolver):
+    def _store_tier3_data(self, threat_model, json_data, blueprint, resolver, warnings):
         """Store ThreatModel-level Tier 3 data for round-trip fidelity."""
         tier3 = {}
 
@@ -1706,7 +1909,7 @@ class CycloneDxAdapter(BaseAdapter):
         passthrough_visualizations = []
         for vis in visualizations:
             if vis.get("type") == "precogly-dfd" and vis.get("data"):
-                self._import_dfd(vis, threat_model, resolver)
+                self._import_dfd(vis, threat_model, resolver, warnings)
             else:
                 passthrough_visualizations.append(vis)
         if passthrough_visualizations:
@@ -1716,7 +1919,7 @@ class CycloneDxAdapter(BaseAdapter):
             threat_model.format_metadata.setdefault("cyclonedx", {}).update(tier3)
             threat_model.save(update_fields=["format_metadata"])
 
-    def _import_dfd(self, vis_data, threat_model, resolver):
+    def _import_dfd(self, vis_data, threat_model, resolver, warnings):
         """Recreate a DFD record from an exported Precogly DFD visualization."""
         import copy
 
@@ -1726,42 +1929,74 @@ class CycloneDxAdapter(BaseAdapter):
         diagram_type = vis_data.get("diagramType", "level1")
         canvas_data = copy.deepcopy(vis_data.get("data", {}))
 
-        # Build name → new component mapping from resolver
+        # Normalize camelCase keys from guest editor to snake_case
+        for node in canvas_data.get("nodes", []):
+            if "parentId" in node and "parent_id" not in node:
+                node["parent_id"] = node.pop("parentId")
+            data = node.get("data", {})
+            if "trustZoneId" in data and "trust_zone_id" not in data:
+                data["trust_zone_id"] = data.pop("trustZoneId")
+        for edge in canvas_data.get("edges", []):
+            data = edge.get("data", {})
+            if "dataflowId" in data and "dataflow_id" not in data:
+                data["dataflow_id"] = data.pop("dataflowId")
+            if "trustBoundaryId" in data and "trust_boundary_id" not in data:
+                data["trust_boundary_id"] = data.pop("trustBoundaryId")
+
+        # Build resolver lookups
         asset_name_to_component = {}
+        zone_name_to_zone = {}
+        boundary_name_to_boundary = {}
+        flow_label_to_flow = {}
         for _ref_key, (entity_type, obj) in resolver._ref_to_obj.items():
             if entity_type == "asset" and hasattr(obj, "name"):
                 asset_name_to_component[obj.name] = obj
+            elif entity_type == "zone" and hasattr(obj, "name"):
+                zone_name_to_zone[obj.name] = obj
+            elif entity_type == "boundary" and hasattr(obj, "id"):
+                if hasattr(obj, "name"):
+                    boundary_name_to_boundary[obj.name] = obj
+            elif entity_type == "flow" and hasattr(obj, "label"):
+                flow_label_to_flow[obj.label] = obj
 
-        # Remap component_id in nodes to newly created component IDs
+        # Assign/remap foreign keys in nodes
         for node in canvas_data.get("nodes", []):
             data = node.get("data", {})
-            if data.get("component_id") is None:
-                continue
             label = data.get("label", "")
+            node_type = node.get("type", "")
+
+            if node_type == "trustZone":
+                zone = zone_name_to_zone.get(label)
+                if zone:
+                    data["trust_zone_id"] = zone.id
+                continue
+
             new_component = asset_name_to_component.get(label)
             if new_component:
                 data["component_id"] = new_component.id
-            else:
-                logger.warning(
-                    "DFD node '%s' has no matching imported asset; "
-                    "component_id may be stale.",
-                    label,
+            elif data.get("component_id") is not None:
+                msg = (
+                    f"DFD node '{label}' has no matching imported asset. "
+                    f"It may appear unlinked on the canvas."
                 )
+                logger.warning(msg)
+                warnings.append(msg)
 
-        # Remap dataflowId in edges to newly created flow IDs
-        flow_label_to_flow = {}
-        for _ref_key, (entity_type, obj) in resolver._ref_to_obj.items():
-            if entity_type == "flow" and hasattr(obj, "label"):
-                flow_label_to_flow[obj.label] = obj
-
+        # Assign/remap foreign keys in edges
         for edge in canvas_data.get("edges", []):
             data = edge.get("data", {})
-            if data.get("dataflowId") is None:
-                continue
             label = data.get("label", "")
+            edge_type = edge.get("type", "")
+
+            if edge_type == "trustBoundary":
+                boundary = boundary_name_to_boundary.get(label)
+                if boundary:
+                    data["trust_boundary_id"] = boundary.id
+                continue
+
             new_flow = flow_label_to_flow.get(label)
             if new_flow:
-                data["dataflowId"] = new_flow.id
+                data["dataflow_id"] = new_flow.id
 
         DFD.objects.create(
             name=name,

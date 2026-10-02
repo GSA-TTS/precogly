@@ -2,6 +2,57 @@
 
 All notable releases of Precogly are documented here.
 
+## v0.4.0
+
+**Release date:** September 15, 2026
+
+The v0.4.0 release adds AI-powered DFD generation, a vendor-neutral AI/ML threat library, a redesigned threat triage workflow, and expanded AWS coverage.
+
+### AI and library packs
+
+- Added AI-powered DFD generation from architecture diagram images. A two-step flow uses a vision model to extract components, flows, and zones, then a text model generates canvas data with layout correction.
+- Added vendor-neutral AI/ML threat library pack with 55 threats, 53 countermeasures, 12 components, and OWASP LLM/Agentic/MCP Top 10 taxonomies. Cross-pack AI references wired into the AWS pack.
+- Expanded AWS library pack to 41 components with full taxonomy and compliance mappings, new DFD templates, and official AWS icons.
+- Added STRIDE Worksheets pack with a STRIDE per Interaction table template for facilitating threat modeling sessions.
+
+### Threat triage and control classification
+
+- Replaced binary threat dismissal with a five-status triage workflow: Open, Accept, Mitigate, Delegate, Eliminate. Triaged threats require a decision rationale for audit traceability.
+- Split the single `control_type` field into a multi-value `control_functions` list and a separate `control_nature` field (technical, administrative, or physical). Removed `procedural` from valid control function values.
+- Migrated library packs and MCP server to the new control_functions/control_nature schema.
+
+### CycloneDX TM-BOM interoperability
+
+- Improved CycloneDX round-trip fidelity: triage status, control functions/nature, taxonomy categories, and assumptions now survive import and export via `precogly:*` properties.
+- Improved CycloneDX import error messages with actionable detail about which entity failed.
+
+### Security and OAuth
+
+- Precogly now runs as an OAuth 2.1 authorization server.
+- Added gitleaks support in CI and precommit.
+- Fixed stored XSS via ComponentLibrary.icon_svg.
+
+### DFD editor
+
+- Added table node type with configurable size and text wrapping.
+- Folded AI threat ranking into the Add Threat dialog and retired the standalone owl affordance.
+- Added DFD notation switching (DFD3 / Yourdon-DeMarco).
+- Allowed adding taxonomy entries to individual threat instances.
+
+### Bug fixes
+
+- Fixed guest editor import losing DFD layout by normalizing snake_case keys from backend export to camelCase.
+- Fixed trust zone count inflation across multiple DFDs.
+- Fixed CASCADE-delete on compliance requirement mappings.
+- Fixed outdated and wrong MITRE taxonomy entries.
+- Fixed image export cropping and added an export options dialog.
+- Brought frontend CountermeasureStatus enums in sync with backend.
+
+[View the full generated changelog](https://github.com/precogly/precogly/blob/main/CHANGELOG.md)
+or [download v0.4.0](https://github.com/precogly/precogly/releases/tag/v0.4.0).
+
+---
+
 ## v0.3.0
 
 **Release date:** July 31, 2026

@@ -20,12 +20,12 @@ You need the following installed on your machine:
 ### 1. Clone the repository
 
 ```bash
-git clone --branch v0.3.0 https://github.com/precogly/precogly.git
+git clone --branch v0.4.0 https://github.com/precogly/precogly.git
 cd precogly
 ```
 
 !!! tip "Latest stable release"
-    The `--branch v0.3.0` flag checks out the latest stable release. To use the development branch instead, omit it and clone `main`.
+    The `--branch v0.4.0` flag checks out the latest stable release. To use the development branch instead, omit it and clone `main`.
 
 ### 2. Start the application
 

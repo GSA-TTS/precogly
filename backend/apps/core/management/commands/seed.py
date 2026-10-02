@@ -2,7 +2,8 @@
 Seed the database with demo data for new contributors.
 
 Creates a superuser, demo organization, imports library packs,
-and creates sample threat models with DFD templates.
+and creates sample threat models with DFD templates. Fills the first sample
+model's Risk Register.
 
 Also creates a second organization and a member who is not on the security team, so
 that the demo database can exhibit multi-tenancy. See _create_second_org for why that
@@ -27,6 +28,8 @@ from apps.organizations.models import (
 from apps.packs.models import LibraryPack
 from apps.packs.services import get_libraries_path, import_pack_from_path, validate_pack
 from apps.threat_models.models import ThreatModel, ThreatModelLibraryPack
+from apps.threats.models import Risk
+from apps.threats.services import calculate_inherent_score
 
 User = get_user_model()
 
@@ -52,6 +55,9 @@ TAXONOMY_PACKS = [
     "taxonomies/cwe",
     "taxonomies/mitre-attack",
     "taxonomies/mitre-atlas",
+    "taxonomies/owasp-llm-top-10",
+    "taxonomies/owasp-agentic-top-10",
+    "taxonomies/owasp-mcp-top-10",
 ]
 
 STANDARD_PACKS = [
@@ -65,20 +71,21 @@ STANDARD_PACKS = [
 ]
 
 FULL_PACKS = [
+    "threat-libraries/ai",
     "threat-libraries/aws",
 ]
 
 SAMPLE_THREAT_MODELS = [
     {
-        "name": "Sample AWS Serverless API",
-        "description": "A sample serverless API threat model with API Gateway, Lambda, S3, and WAF.",
-        "template_slug": "aws/aws-serverless",
+        "name": "Sample AWS Serverless Web App",
+        "description": "A sample serverless web app with CloudFront, API Gateway, Lambda, DynamoDB, and S3.",
+        "template_slug": "aws/aws-serverless-web-app",
         "criticality": "HIGH",
     },
     {
-        "name": "Sample AWS AI Chatbot",
-        "description": "A sample AI chatbot threat model with Bedrock, RAG pipeline, and OpenSearch.",
-        "template_slug": "aws/aws-ai-chatbot",
+        "name": "Sample AWS RAG / Generative AI",
+        "description": "A sample RAG app with Bedrock Agents, Knowledge Bases, and OpenSearch Serverless.",
+        "template_slug": "aws/aws-rag-genai",
         "criticality": "HIGH",
     },
 ]
@@ -93,6 +100,52 @@ SECOND_ORG_THREAT_MODELS = [
         "criticality": "CRITICAL",
     },
 ]
+
+# Risks for the Risk Register, on the first sample threat model.
+#
+# Scores are not written here. `calculate_inherent_score` derives them from these
+# pairs the same way the application does, so demo risks cannot drift from what
+# the scoring engine would produce.
+SAMPLE_RISKS = {
+    None: [
+        ("Unauthenticated internal Lambda invoke URL", "certain", "severe"),
+        ("Public S3 bucket exposes customer documents", "likely", "severe"),
+        ("No request throttling on the auth endpoint", "likely", "major"),
+        ("Lambda role grants wildcard S3 permissions", "possible", "severe"),
+        ("Secrets in plaintext Lambda env variables", "possible", "major"),
+        ("Request bodies with PII retained in logs", "unlikely", "major"),
+    ],
+    "mitigate": [
+        ("SQL injection in the order lookup handler", "likely", "severe"),
+        ("WAF rules miss newer OWASP categories", "certain", "major"),
+        ("JWT signature unchecked on the internal path", "likely", "major"),
+        ("Cross-tenant read via unvalidated bucket key", "certain", "moderate"),
+        ("Known RCE in a bundled Lambda dependency", "likely", "moderate"),
+        ("No rate limit on credential stuffing", "certain", "minor"),
+        ("Stack traces disclosed in API errors", "possible", "moderate"),
+    ],
+    # Carried by a provider contract or an insurer.
+    "transfer": [
+        ("Payment processor outage halts settlement", "unlikely", "severe"),
+        ("OpenSearch cluster loses an availability zone", "unlikely", "major"),
+        ("CDN mis-routes traffic on a config push", "possible", "minor"),
+        ("Identity provider certificate expires", "unlikely", "moderate"),
+    ],
+    # The activity is dropped rather than controlled.
+    "avoid": [
+        ("Shared root credentials in the deploy pipeline", "likely", "severe"),
+        ("Customer data copied to the analytics sandbox", "possible", "severe"),
+        ("Direct database access from developer laptops", "possible", "major"),
+    ],
+    # Raising either value on any of these lifts it onto the first page, so the
+    # Accept column stops being empty there.
+    "accept": [
+        ("Internal status page exposes service names", "rare", "negligible"),
+        ("Staging bucket keeps unversioned objects", "rare", "negligible"),
+        ("Admin console lacks a session idle timeout", "rare", "negligible"),
+        ("Developer docs list internal hostnames", "rare", "negligible"),
+    ],
+}
 
 
 class Command(BaseCommand):
@@ -118,6 +171,7 @@ class Command(BaseCommand):
         # imported packs on the same run rather than on the next one.
         self._create_second_org()
         self._connect_packs_to_threat_models()
+        self._seed_risks(org)
         self._report_accounts()
 
     def _create_org(self):
@@ -378,6 +432,61 @@ class Command(BaseCommand):
                     f"({components_count} components, {threats_count} threats)"
                 )
             )
+
+    def _seed_risks(self, org):
+        """Fill the first sample threat model's Risk Register.
+
+        Keyed on whether that model already has risks, not on whether this run
+        created it. `_create_sample_threat_models` skips a model that exists, so
+        a step hung off model creation would never run on a database that has
+        been seeded before — which is every database that needs this.
+        """
+        threat_model = ThreatModel.objects.filter(
+            name=SAMPLE_THREAT_MODELS[0]["name"], organization=org
+        ).first()
+        if not threat_model:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"No threat model named {SAMPLE_THREAT_MODELS[0]['name']}. "
+                    "Risk Register left empty."
+                )
+            )
+            return
+
+        if threat_model.risks.exists():
+            self.stdout.write(f"Risks already exist: {threat_model.name}")
+            return
+
+        owner = User.objects.filter(username=DEMO_EMAIL).first()
+        assignee = User.objects.filter(username=ANALYST_EMAIL).first()
+
+        risks = []
+        for response, entries in SAMPLE_RISKS.items():
+            for name, likelihood, impact in entries:
+                scoring_metadata = {"likelihood": likelihood, "impact": impact}
+                score, level = calculate_inherent_score(
+                    threat_model.risk_scoring_method, scoring_metadata
+                )
+                position = len(risks)
+                risks.append(
+                    Risk(
+                        threat_model=threat_model,
+                        name=name,
+                        scoring_metadata=scoring_metadata,
+                        inherent_score=score,
+                        inherent_level=level,
+                        response=response,
+                        # Leave every third risk unowned. An owner column filled
+                        # on every row never renders its empty state.
+                        owner=owner if position % 3 else None,
+                        assigned_to=assignee if position % 4 == 0 else None,
+                    )
+                )
+
+        Risk.objects.bulk_create(risks)
+        self.stdout.write(
+            self.style.SUCCESS(f"Created {len(risks)} risks on {threat_model.name}")
+        )
 
     def _connect_packs_to_threat_models(self):
         """Ensure all imported packs are connected to all threat models."""

@@ -28,7 +28,9 @@ countermeasures:
     description: |
       Enable AWS WAF to protect against common web exploits.
       Block SQL injection, XSS, and known bad actors.
-    control_type: preventive
+    control_functions:
+      - preventive
+    control_nature: technical
     cost: medium
     default_status: platform
 ```

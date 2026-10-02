@@ -11,16 +11,15 @@ import { deriveThreatStatus } from '@/features/dfd-editor/types/threat-analysis'
 import {
   useThreatModelThreats,
   useUpdateCountermeasure,
-  useDismissThreat,
-  useRestoreThreat,
-  useDismissFlowThreat,
-  useRestoreFlowThreat,
+  useUpdateTriageStatus,
+  useUpdateFlowTriageStatus,
   parseCountermeasureId,
   parseThreatId,
   useReorderComponentThreats,
   useReorderFlowThreats,
   useReorderCountermeasures,
 } from '@/features/threat-models/api/threats'
+import { isActiveThreat, type TriageStatus } from '@/types/triage'
 import { useThreatModel } from '@/features/threat-models/api/threat-models'
 
 interface WorkspaceThreatAnalysisState {
@@ -55,10 +54,8 @@ export function useWorkspaceThreatAnalysis(
 
   // Backend API mutations
   const updateCountermeasureMutation = useUpdateCountermeasure()
-  const dismissThreatMutation = useDismissThreat()
-  const restoreThreatMutation = useRestoreThreat()
-  const dismissFlowThreatMutation = useDismissFlowThreat()
-  const restoreFlowThreatMutation = useRestoreFlowThreat()
+  const updateTriageStatusMutation = useUpdateTriageStatus()
+  const updateFlowTriageStatusMutation = useUpdateFlowTriageStatus()
   const reorderComponentThreatsMutation = useReorderComponentThreats()
   const reorderFlowThreatsMutation = useReorderFlowThreats()
   const reorderCountermeasuresMutation = useReorderCountermeasures()
@@ -355,43 +352,44 @@ export function useWorkspaceThreatAnalysis(
     [state.componentThreats, updateCountermeasureMutation]
   )
 
-  // Dismiss threat
-  const dismissThreat = useCallback((componentThreatId: string) => {
+  // Update triage status
+  const updateTriageStatus = useCallback((
+    componentThreatId: string,
+    componentId: string,
+    triageStatus: TriageStatus,
+    decisionRationale?: string
+  ) => {
+    // componentId is available for future use (e.g., optimistic updates per component)
+    void componentId
     const threat = state.componentThreats.find((ct) => ct.id === componentThreatId)
     if (threat?.backendThreatId) {
       if (threat.threatType === 'dataflow') {
-        dismissFlowThreatMutation.mutate({ threatId: threat.backendThreatId, reason: '' })
+        updateFlowTriageStatusMutation.mutate({
+          threatId: threat.backendThreatId,
+          triageStatus,
+          decisionRationale,
+        })
       } else {
-        dismissThreatMutation.mutate({ threatId: threat.backendThreatId, reason: '' })
+        updateTriageStatusMutation.mutate({
+          threatId: threat.backendThreatId,
+          triageStatus,
+          decisionRationale,
+        })
       }
     }
     setState((prev) => ({
       ...prev,
       componentThreats: prev.componentThreats.map((ct) => {
         if (ct.id !== componentThreatId) return ct
-        return { ...ct, dismissed: true, updatedAt: new Date().toISOString() }
+        return {
+          ...ct,
+          triageStatus,
+          decisionRationale: decisionRationale ?? ct.decisionRationale,
+          updatedAt: new Date().toISOString(),
+        }
       }),
     }))
-  }, [state.componentThreats, dismissThreatMutation, dismissFlowThreatMutation])
-
-  // Restore dismissed threat
-  const restoreThreat = useCallback((componentThreatId: string) => {
-    const threat = state.componentThreats.find((ct) => ct.id === componentThreatId)
-    if (threat?.backendThreatId) {
-      if (threat.threatType === 'dataflow') {
-        restoreFlowThreatMutation.mutate(threat.backendThreatId)
-      } else {
-        restoreThreatMutation.mutate(threat.backendThreatId)
-      }
-    }
-    setState((prev) => ({
-      ...prev,
-      componentThreats: prev.componentThreats.map((ct) => {
-        if (ct.id !== componentThreatId) return ct
-        return { ...ct, dismissed: false, updatedAt: new Date().toISOString() }
-      }),
-    }))
-  }, [state.componentThreats, restoreThreatMutation, restoreFlowThreatMutation])
+  }, [state.componentThreats, updateTriageStatusMutation, updateFlowTriageStatusMutation])
 
   // Add custom countermeasure
   const addCountermeasure = useCallback(
@@ -500,7 +498,7 @@ export function useWorkspaceThreatAnalysis(
 
   // Compute summary statistics
   const summaries = useMemo(() => {
-    const activeThreats = state.componentThreats.filter((ct) => !ct.dismissed)
+    const activeThreats = state.componentThreats.filter((ct) => isActiveThreat(ct.triageStatus))
 
     const allNodes = diagrams.filter((d) => d.isPrimary).flatMap((d) => d.canvasData?.nodes || [])
 
@@ -586,8 +584,7 @@ export function useWorkspaceThreatAnalysis(
     updateCountermeasureDueDate,
     updateCountermeasureExternalTicket,
     assignOwner,
-    dismissThreat,
-    restoreThreat,
+    updateTriageStatus,
     addCountermeasure,
     toggleChecklistItem,
     reorderThreats,

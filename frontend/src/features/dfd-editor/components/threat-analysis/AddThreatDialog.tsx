@@ -36,7 +36,11 @@ import {
   useFlowThreats,
   useCreateComponentThreat,
   useCreateFlowThreat,
+  useCreateInstanceTaxonomyEntry,
 } from '@/features/threat-models/api/threats'
+import { useTaxonomyEntries } from '@/features/libraries/api/libraries'
+import { TRIAGE_STATUSES, type TriageStatus } from '@/types/triage'
+import { formatTaxonomyEntryLabel } from '@/types/domain'
 
 const SEVERITY_OPTIONS = [
   { value: 'low', label: 'Low' },
@@ -73,6 +77,8 @@ export function AddThreatDialog({
   const [customName, setCustomName] = useState('')
   const [customDescription, setCustomDescription] = useState('')
   const [customSeverity, setCustomSeverity] = useState('medium')
+  const [customTriageStatus, setCustomTriageStatus] = useState<TriageStatus>('open')
+  const [customTaxonomyEntryId, setCustomTaxonomyEntryId] = useState<string>('none')
   const [showAllThreats, setShowAllThreats] = useState(false)
   // Whether the list is the model's ranking rather than the raw library. This
   // is a third state layered on the scope toggle rather than a fourth cell in a
@@ -89,6 +95,19 @@ export function AddThreatDialog({
   const { data: threatLibrary, isLoading } = useThreatLibrary(effectiveComponentId, threatModelId)
   const createComponentThreat = useCreateComponentThreat()
   const createFlowThreat = useCreateFlowThreat()
+  const createInstanceTaxonomyEntry = useCreateInstanceTaxonomyEntry()
+  const { data: allTaxonomyEntries } = useTaxonomyEntries()
+
+  const taxonomyEntriesByTaxonomy = allTaxonomyEntries
+    ? Object.entries(
+        allTaxonomyEntries.reduce<Record<string, typeof allTaxonomyEntries>>((acc, entry) => {
+          const key = entry.taxonomyName ?? entry.taxonomySlug
+          if (!acc[key]) acc[key] = []
+          acc[key].push(entry)
+          return acc
+        }, {})
+      )
+    : []
 
   // Ranking is component-only: the suggest endpoint takes a component id and
   // has no dataflow equivalent, so dataflows never see the option at all.
@@ -101,10 +120,10 @@ export function AddThreatDialog({
   // backend rejects the duplicate — so they come out of the list entirely
   // rather than sitting there waiting to fail.
   //
-  // Dismissed threats count as present, matching what the ranker does
-  // (`candidate_library_threats` excludes every instance, dismissed or not).
-  // A dismissal is a recorded decision that shows up in compliance reporting,
-  // so the way back is Restore, not a silent re-add.
+  // Triaged threats count as present, matching what the ranker does
+  // (`candidate_library_threats` excludes every instance, triaged or not).
+  // A triage decision shows up in compliance reporting,
+  // so the way back is to change the triage status, not a silent re-add.
   const componentThreats = useComponentThreats(aiComponentId)
   const flowThreats = useFlowThreats(targetType === 'dataflow' ? targetId : null)
   const alreadyAdded = new Set(
@@ -197,9 +216,18 @@ export function AddThreatDialog({
       threatName: customName,
       threatDescription: customDescription,
       inherentSeverity: customSeverity,
+      triageStatus: customTriageStatus,
       status: 'exposed',
     }
-    const onMutationSuccess = () => {
+    const taxonomyEntryIdNum = customTaxonomyEntryId !== 'none' ? Number(customTaxonomyEntryId) : null
+    const onMutationSuccess = (result: unknown) => {
+      const { id } = result as { id: number }
+      if (taxonomyEntryIdNum) {
+        const linkPayload = targetType === 'component'
+          ? { taxonomyEntry: taxonomyEntryIdNum, componentThreat: id }
+          : { taxonomyEntry: taxonomyEntryIdNum, flowThreat: id }
+        createInstanceTaxonomyEntry.mutate(linkPayload)
+      }
       onOpenChange(false)
       resetForm()
       onSuccess?.()
@@ -225,6 +253,8 @@ export function AddThreatDialog({
     setCustomName('')
     setCustomDescription('')
     setCustomSeverity('medium')
+    setCustomTriageStatus('open')
+    setCustomTaxonomyEntryId('none')
     setActiveTab('library')
     setShowAllThreats(false)
     setShowRanked(false)
@@ -434,21 +464,62 @@ export function AddThreatDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="custom-severity">Severity *</Label>
-              <Select value={customSeverity} onValueChange={setCustomSeverity}>
-                <SelectTrigger id="custom-severity">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEVERITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="custom-severity">Severity *</Label>
+                <Select value={customSeverity} onValueChange={setCustomSeverity}>
+                  <SelectTrigger id="custom-severity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEVERITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="custom-triage-status">Status</Label>
+                <Select value={customTriageStatus} onValueChange={(v) => setCustomTriageStatus(v as TriageStatus)}>
+                  <SelectTrigger id="custom-triage-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRIAGE_STATUSES.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {taxonomyEntriesByTaxonomy.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-taxonomy">Taxonomy Category</Label>
+                <Select value={customTaxonomyEntryId} onValueChange={setCustomTaxonomyEntryId}>
+                  <SelectTrigger id="custom-taxonomy">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {taxonomyEntriesByTaxonomy.map(([taxonomyName, entries]) => (
+                      entries.map((entry) => (
+                        <SelectItem key={entry.id} value={String(entry.id)}>
+                          {taxonomyEntriesByTaxonomy.length > 1
+                            ? `${taxonomyName}: ${formatTaxonomyEntryLabel(entry)}`
+                            : formatTaxonomyEntryLabel(entry)}
+                        </SelectItem>
+                      ))
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
               <FileText className="h-4 w-4 shrink-0" />

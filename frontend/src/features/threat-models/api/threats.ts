@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient, skipToken } from '@tanstack/reac
 import { api } from '@/lib/api'
 import type { ComponentThreat, ComponentThreatCountermeasure, CountermeasureStatus } from '@/features/dfd-editor/types/threat-analysis'
 import type { TaxonomyEntry } from '@/types/domain'
+import type { TriageStatus } from '@/types/triage'
 import { componentKeys } from './components'
 import { riskKeys } from './risks'
 
@@ -26,8 +27,8 @@ export interface ComponentInstanceThreat {
   residualSeverity: string
   status: 'exposed' | 'addressable' | 'mitigated'
   severityScoringMetadata: Record<string, unknown>
-  isDismissed: boolean
-  dismissalReason: string
+  triageStatus: TriageStatus
+  decisionRationale: string
   formatMetadata: Record<string, unknown>
   // Actor & impact fields
   impactDescription?: string
@@ -42,7 +43,8 @@ export interface CountermeasureLibraryItem {
   id: number
   name: string
   description?: string
-  controlType: string
+  controlFunctions: string[]
+  controlNature: string
   cost: string
   defaultStatus?: string
   sourcePackName: string | null
@@ -64,7 +66,8 @@ export interface ComponentInstanceCountermeasure {
   countermeasureLibrary: number
   countermeasureName: string
   countermeasureDescription?: string
-  controlType?: string
+  controlFunctions?: string[]
+  controlNature?: string
   status: BackendCountermeasureStatus
   priority: string
   dueDate?: string | null
@@ -262,6 +265,7 @@ export function useCreateComponentThreat() {
       threatDescription?: string
       inherentSeverity: string
       status?: string
+      triageStatus?: TriageStatus
       impactDescription?: string
       threatActorText?: string
     }) => api.post<ComponentInstanceThreat>('/component-threats/', data),
@@ -288,6 +292,7 @@ export function useCreateFlowThreat() {
       threatDescription?: string
       inherentSeverity: string
       status?: string
+      triageStatus?: TriageStatus
       impactDescription?: string
       threatActorText?: string
     }) => api.post('/flow-threats/', data),
@@ -314,7 +319,8 @@ export function useCreateCountermeasure() {
       countermeasureLibrary?: number | null
       countermeasureName?: string
       countermeasureDescription?: string
-      controlType?: string
+      controlFunctions?: string[]
+      controlNature?: string
       status?: string
     }) => api.post<ComponentInstanceCountermeasure>('/countermeasures/', data),
     onSuccess: () => {
@@ -399,6 +405,8 @@ export function useUpdateThreat() {
     }) => api.patch<ComponentInstanceThreat>(`/component-threats/${threatId}/`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: threatKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
+      queryClient.invalidateQueries({ queryKey: ['threat-models'] })
     },
   })
 }
@@ -426,22 +434,24 @@ export function useUpdateFlowThreat() {
 }
 
 /**
- * Dismiss a component threat.
+ * Update triage status for a component threat.
  */
-export function useDismissThreat() {
+export function useUpdateTriageStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({
       threatId,
-      reason,
+      triageStatus,
+      decisionRationale,
     }: {
       threatId: number
-      reason: string
+      triageStatus: string
+      decisionRationale?: string
     }) =>
       api.patch<ComponentInstanceThreat>(`/component-threats/${threatId}/`, {
-        isDismissed: true,
-        dismissalReason: reason,
+        triageStatus,
+        decisionRationale: decisionRationale ?? '',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: threatKeys.all })
@@ -452,62 +462,24 @@ export function useDismissThreat() {
 }
 
 /**
- * Restore a dismissed component threat.
+ * Update triage status for a flow threat.
  */
-export function useRestoreThreat() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (threatId: number) =>
-      api.patch<ComponentInstanceThreat>(`/component-threats/${threatId}/`, {
-        isDismissed: false,
-        dismissalReason: '',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: threatKeys.all })
-      queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
-      queryClient.invalidateQueries({ queryKey: ['threat-models'] })
-    },
-  })
-}
-
-/**
- * Dismiss a flow threat.
- */
-export function useDismissFlowThreat() {
+export function useUpdateFlowTriageStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({
       threatId,
-      reason,
+      triageStatus,
+      decisionRationale,
     }: {
       threatId: number
-      reason: string
+      triageStatus: string
+      decisionRationale?: string
     }) =>
       api.patch(`/flow-threats/${threatId}/`, {
-        isDismissed: true,
-        dismissalReason: reason,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: threatKeys.all })
-      queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
-      queryClient.invalidateQueries({ queryKey: ['threat-models'] })
-    },
-  })
-}
-
-/**
- * Restore a dismissed flow threat.
- */
-export function useRestoreFlowThreat() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (threatId: number) =>
-      api.patch(`/flow-threats/${threatId}/`, {
-        isDismissed: false,
-        dismissalReason: '',
+        triageStatus,
+        decisionRationale: decisionRationale ?? '',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: threatKeys.all })
@@ -561,6 +533,23 @@ export function useDeleteCountermeasure() {
       queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
       queryClient.invalidateQueries({ queryKey: ['threat-models'] })
       queryClient.invalidateQueries({ queryKey: ['countermeasures-in-use'] })
+      queryClient.invalidateQueries({ queryKey: riskKeys.all })
+    },
+  })
+}
+
+export function useDeleteThreat() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ threatId, threatType }: { threatId: number; threatType: 'component' | 'dataflow' }) => {
+      const endpoint = threatType === 'dataflow' ? 'flow-threats' : 'component-threats'
+      return api.delete(`/${endpoint}/${threatId}/`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: threatKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
+      queryClient.invalidateQueries({ queryKey: ['threat-models'] })
       queryClient.invalidateQueries({ queryKey: riskKeys.all })
     },
   })
@@ -635,8 +624,8 @@ export interface BackendThreat {
   residualSeverity: string
   status: 'exposed' | 'addressable' | 'mitigated'
   severityScoringMetadata: Record<string, unknown>
-  isDismissed: boolean
-  dismissalReason: string
+  triageStatus: TriageStatus
+  decisionRationale: string
   displayOrder?: number
   // Actor & impact fields
   impactDescription?: string
@@ -665,7 +654,8 @@ export interface BackendCountermeasure {
   id: number
   countermeasureLibraryId: number
   countermeasureName: string | null
-  controlType: string | null
+  controlFunctions: string[] | null
+  controlNature: string | null
   status: BackendCountermeasureStatus
   priority: string
   dueDate?: string | null
@@ -713,7 +703,8 @@ export function transformBackendThreatsToComponentThreats(
       createdAt: now,
       updatedAt: now,
       countermeasureName: cm.countermeasureName || undefined,
-      controlType: cm.controlType || undefined,
+      controlFunctions: cm.controlFunctions || [],
+      controlNature: cm.controlNature || '',
       standardMappings: cm.standardMappings || [],
       displayOrder: cm.displayOrder ?? 0,
       isInherited: cm.isInherited || false,
@@ -733,8 +724,8 @@ export function transformBackendThreatsToComponentThreats(
         ? (bt.edgeId || `dataflow-${bt.dataflowId}`)
         : (bt.nodeId || `component-${bt.componentId}`),
       threatId: `lib-${bt.threatLibraryId}`,
-      dismissed: bt.isDismissed,
-      dismissalReason: bt.dismissalReason || undefined,
+      triageStatus: bt.triageStatus || 'open',
+      decisionRationale: bt.decisionRationale || '',
       countermeasures,
       createdAt: now,
       updatedAt: now,
@@ -898,7 +889,8 @@ export interface ZoneProtectionSuggestion {
   sourceComponentName: string
   sourceZoneName: string
   countermeasureName: string
-  controlType: string
+  controlFunctions: string[]
+  controlNature: string
 }
 
 interface ZoneProtectionsResponse {

@@ -21,3 +21,19 @@ Assign a team member as owner to move a countermeasure from Gap to Planned. Set 
 Countermeasures can be mapped to compliance framework requirements. Expand the compliance coverage section to see which standards a countermeasure satisfies and whether coverage is full or partial.
 
 ![Compliance mappings on a countermeasure — OWASP ASVS and CRA requirements with sufficiency indicators](../assets/images/threat-analysis-compliance-mappings.png)
+
+## Threat triage
+
+Each threat carries a **triage status** that records the team's risk treatment decision:
+
+| Status | Meaning | Effect |
+| ------ | ------- | ------ |
+| **Open** | Not yet reviewed | Active. Counted in the STRIDE summary and threat counts. |
+| **Mitigate** | Will be addressed with countermeasures | Active. Counted in the STRIDE summary and threat counts. |
+| **Accept** | Risk is tolerable as-is | Triaged out. Excluded from active analysis. |
+| **Delegate** | Risk ownership transferred to another party | Triaged out. Excluded from active analysis. |
+| **Eliminate** | Threat source removed from the design | Triaged out. Excluded from active analysis. |
+
+Open and Mitigate are **active** statuses: threats with these statuses appear in the STRIDE summary, contribute to risk scores, and show in the main threat analysis view.
+
+Accept, Delegate, and Eliminate are **triaged-out** statuses. When you triage a threat, you must provide a **decision rationale** explaining why. Triaged threats move to the Triaged Threats section of reports and are excluded from active threat counts, but remain visible for audit purposes.

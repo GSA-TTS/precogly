@@ -77,7 +77,7 @@ export function exportCountermeasuresCSV(data: ReportData, modelName: string): v
     for (const cm of threat.countermeasures) {
       rows.push([
         cm.countermeasureName,
-        cm.controlType,
+        (cm.controlFunctions || []).join(', '),
         cm.status,
         cm.priority,
         (cm.complianceStandards ?? []).map(s => `${s.frameworkName} ${s.sectionCode}`).join('; '),

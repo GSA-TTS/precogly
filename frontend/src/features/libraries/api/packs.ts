@@ -98,7 +98,8 @@ export interface PackPreviewThreat {
 export interface PackPreviewCountermeasure {
   slug: string
   name: string
-  controlType: string
+  controlFunctions: string[]
+  controlNature: string
   cost: string
   defaultStatus?: string
   description: string

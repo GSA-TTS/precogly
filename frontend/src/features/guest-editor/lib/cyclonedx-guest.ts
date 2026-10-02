@@ -200,9 +200,11 @@ export function serializeGuestToCycloneDx(
   // Strip transient UI flags before persisting
   const cleanedNodes = nodes.map((node) => {
     const { isInlineEditing, isNewlyInserted, ...restData } = node.data as Record<string, unknown>
+    const { extent, ...nodeWithoutExtent } = node as Record<string, unknown>
+    const base = extent ? nodeWithoutExtent : node
     return isInlineEditing || isNewlyInserted
-      ? { ...node, data: restData }
-      : node
+      ? { ...base, data: restData }
+      : base
   })
   const visualization: CycloneDxVisualization = {
     type: 'precogly-dfd',
@@ -255,10 +257,6 @@ export function serializeGuestToCycloneDx(
     }
     if (controlProperties.length) control.properties = controlProperties
 
-    // Link to threat bom-ref via mitigations
-    const threatRef = threatIdToBomRef.get(c.threatId)
-    if (threatRef) control.mitigations = [threatRef]
-
     countermeasureIdToControl.set(c.id, control)
     return control
   })
@@ -293,18 +291,6 @@ export function serializeGuestToCycloneDx(
     }
     if (affectedRef) abstractThreat.affectedAssets = [affectedRef]
 
-    // Serialize status and decision rationale as CycloneDX properties
-    const threatProperties: CycloneDxProperty[] = []
-    if (threat.status && threat.status !== 'open') {
-      threatProperties.push({ name: 'precogly:threat-status', value: threat.status })
-    }
-    if (threat.decisionRationale?.trim()) {
-      threatProperties.push({ name: 'precogly:decision-rationale', value: threat.decisionRationale.trim() })
-    }
-    if (threatProperties.length > 0) {
-      abstractThreat.properties = threatProperties
-    }
-
     // Link mitigations from countermeasures that reference this threat
     const mitigationRefs = countermeasures
       .filter((c) => c.threatId === threat.id)
@@ -314,7 +300,7 @@ export function serializeGuestToCycloneDx(
 
     abstractThreats.push(abstractThreat)
 
-    // Scenario
+    // Scenario — triage status lives here (per-instance, not per-definition)
     const scenarioBomRef = refGen.generate('scenario', threat.name || 'scenario')
     const scenario: CycloneDxScenario = {
       'bom-ref': scenarioBomRef,
@@ -324,15 +310,25 @@ export function serializeGuestToCycloneDx(
     scenario.riskScore = {
       level: SEVERITY_TO_CDX_RISK_LEVEL[threat.severity] ?? threat.severity,
     }
+    const scenarioProperties: CycloneDxProperty[] = []
+    if (threat.status && threat.status !== 'open') {
+      scenarioProperties.push({ name: 'precogly:threat-status', value: threat.status })
+    }
+    if (threat.decisionRationale?.trim()) {
+      scenarioProperties.push({ name: 'precogly:decision-rationale', value: threat.decisionRationale.trim() })
+    }
+    if (scenarioProperties.length > 0) {
+      scenario.properties = scenarioProperties
+    }
     scenarios.push(scenario)
   }
 
-  // Now fix up control mitigations that were created before threats
+  // Link control mitigations now that threat bom-refs are populated
   for (const countermeasure of countermeasures) {
     const threatRef = threatIdToBomRef.get(countermeasure.threatId)
     if (threatRef) {
       const matchingControl = countermeasureIdToControl.get(countermeasure.id)
-      if (matchingControl && !matchingControl.mitigations?.length) {
+      if (matchingControl) {
         matchingControl.mitigations = [threatRef]
       }
     }
@@ -378,20 +374,30 @@ export function deserializeCycloneDxToGuest(json: string): DeserializedFile {
   try {
     parsed = JSON.parse(json)
   } catch {
-    throw new Error('Invalid file format. Expected a CycloneDX JSON file.')
+    throw new Error('Could not parse file as JSON. Check that the file is valid JSON and try again.')
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    throw new Error('Invalid file format. Expected a CycloneDX JSON file.')
+    throw new Error('Could not parse file as JSON. The file content must be a JSON object.')
+  }
+
+  if (!parsed.specFormat) {
+    throw new Error(
+      "This file is not in CycloneDX format. The file must have a 'specFormat' field set to 'CycloneDX'."
+    )
   }
 
   if (parsed.specFormat !== 'CycloneDX') {
-    throw new Error('This is not a CycloneDX file.')
+    throw new Error(
+      `This is not a CycloneDX file. Found specFormat '${String(parsed.specFormat)}' but expected 'CycloneDX'.`
+    )
   }
 
   const specVersion = parsed.specVersion as string
   if (!specVersion?.startsWith('2.')) {
-    throw new Error('Unsupported CycloneDX version. Expected 2.0.')
+    throw new Error(
+      `Unsupported CycloneDX version '${specVersion || 'unknown'}'. Only version 2.x files are supported.`
+    )
   }
 
   const blueprints = parsed.blueprints as CycloneDxBlueprint[] | undefined
@@ -420,7 +426,11 @@ function deserializeFromVisualization(
   visualization: CycloneDxVisualization,
   document: Record<string, unknown>
 ): DeserializedFile {
-  const data = visualization.data!
+  // Backend stores canvas_data with snake_case keys (DRF CamelCaseJSONParser
+  // converts on input), but the export dumps raw JSON (bypassing the
+  // CamelCaseJSONRenderer). Normalize back to camelCase for React Flow
+  // and frontend components.
+  const data = normalizeSnakeToCamel(visualization.data!) as Record<string, unknown>
   const nodes = (data.nodes ?? []) as unknown as DiagramNode[]
   const edges = (data.edges ?? []) as unknown as DiagramEdge[]
   const notationStyle = data.notationStyle as DFDNotationStyle | undefined
@@ -440,6 +450,10 @@ function deserializeFromVisualization(
   // Build bomRef -> nodeId/edgeId reverse map from visualization data
   // For round-trip we need to match assets back to node IDs
   const bomRefToNodeId = buildBomRefToNodeIdMap(nodes, edges, document)
+
+  // Collect flow bom-refs so we can infer targetType for unresolved refs
+  const blueprintForFlows = (document.blueprints as CycloneDxBlueprint[] | undefined)?.[0]
+  const flowBomRefs = new Set((blueprintForFlows?.flows ?? []).map((f) => f['bom-ref']))
 
   const threats: GuestThreat[] = scenariosArray.map(
     (scenario: CycloneDxScenario, index: number) => {
@@ -464,12 +478,14 @@ function deserializeFromVisualization(
       const { targetId, targetType } = resolveTargetFromBomRef(
         affectedRef,
         bomRefToNodeId,
-        nodes
+        nodes,
+        flowBomRefs
       )
 
-      // Extract status and rationale from properties
+      // Extract status and rationale from scenario properties (backend export),
+      // falling back to abstract threat properties (old guest editor files)
       const { status, decisionRationale } = extractStatusFromProperties(
-        abstractThreat?.properties
+        scenario.properties ?? abstractThreat?.properties
       )
 
       return {
@@ -528,17 +544,27 @@ function deserializeFromStructure(
 
   let nextNodeIndex = 0
 
-  // --- Generate trust zone nodes ---
+  // --- Count assets per zone for sizing ---
   const zoneData = blueprint?.zones ?? []
+  const assetData = blueprint?.assets ?? []
+  const assetsPerZone = new Map<string, number>()
+  for (const asset of assetData) {
+    if (asset.zone) {
+      assetsPerZone.set(asset.zone, (assetsPerZone.get(asset.zone) ?? 0) + 1)
+    }
+  }
+
+  // --- Generate trust zone nodes ---
   const zoneXStart = 50
   const zoneWidth = 400
-  const zoneHeight = 300
   const zoneGap = 50
 
   for (let i = 0; i < zoneData.length; i++) {
     const zone = zoneData[i]
     const nodeId = `zone-${nextNodeIndex++}`
     bomRefToNodeId.set(zone['bom-ref'], nodeId)
+    const childCount = assetsPerZone.get(zone['bom-ref']) ?? 0
+    const zoneHeight = Math.max(200, 50 + Math.ceil(childCount / 2) * 120 + 80)
     nodes.push({
       id: nodeId,
       type: 'trustZone',
@@ -553,7 +579,6 @@ function deserializeFromStructure(
   }
 
   // --- Generate asset nodes ---
-  const assetData = blueprint?.assets ?? []
   // Track children per zone for grid positioning
   const zoneChildCount = new Map<string, number>()
 
@@ -587,7 +612,6 @@ function deserializeFromStructure(
         label: asset.name,
         description: asset.description,
       },
-      ...(parentId ? { extent: 'parent' as const } : {}),
     } as DiagramNode)
   }
 
@@ -662,6 +686,9 @@ function deserializeFromStructure(
     combinedBomRefMap.set(bomRef, { id: edgeId, type: 'edge' })
   }
 
+  // All flow bom-refs from blueprint (for inferring targetType on unresolved refs)
+  const allFlowBomRefs = new Set(flowData.map((f) => f['bom-ref']))
+
   const threats: GuestThreat[] = scenariosArray.map(
     (scenario: CycloneDxScenario, index: number) => {
       const abstractThreat = threatRefMap.get(scenario.threat)
@@ -689,12 +716,16 @@ function deserializeFromStructure(
             const targetNode = nodes.find((n) => n.id === mapping.id)
             targetType = targetNode?.type === 'systemScope' ? 'systemScope' : 'component'
           }
+        } else {
+          targetType = allFlowBomRefs.has(affectedRef) ? 'dataflow' : 'component'
+          console.warn(`[CycloneDX import] Could not resolve bom-ref "${affectedRef}" to a diagram element. The threat will be unattached.`)
         }
       }
 
-      // Extract status and rationale from properties
+      // Extract status and rationale from scenario properties (backend export),
+      // falling back to abstract threat properties (old guest editor files)
       const { status, decisionRationale } = extractStatusFromProperties(
-        abstractThreat?.properties
+        scenario.properties ?? abstractThreat?.properties
       )
 
       return {
@@ -773,6 +804,21 @@ function deserializeFromStructure(
 // Helpers
 // ---------------------------------------------------------------------------
 
+function normalizeSnakeToCamel(obj: unknown): unknown {
+  if (Array.isArray(obj)) {
+    return obj.map(normalizeSnakeToCamel)
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
+      result[camelKey] = normalizeSnakeToCamel(value)
+    }
+    return result
+  }
+  return obj
+}
+
 function reconstructCountermeasures(
   controlsArray: CycloneDxControl[],
   abstractThreats: CycloneDxThreat[],
@@ -847,10 +893,9 @@ function reconstructCountermeasures(
 /**
  * Build a bom-ref -> node/edge ID reverse map for round-trip deserialization.
  *
- * Uses positional matching: during serialization, zones/assets/flows are built
- * by iterating filtered node/edge arrays in order. The visualization preserves
- * the original arrays. So the Nth blueprint entry corresponds to the Nth
- * matching visualization node/edge — no name-based lookups needed.
+ * Uses name-based matching with consumed-set disambiguation: when multiple
+ * blueprint entries share the same name+type (or same source+destination for
+ * flows), each match is consumed so the next entry picks the next candidate.
  */
 function buildBomRefToNodeIdMap(
   nodes: DiagramNode[],
@@ -863,26 +908,53 @@ function buildBomRefToNodeIdMap(
   const blueprint = blueprints?.[0]
   if (!blueprint) return map
 
-  // Map zone bom-refs to zone nodes by position
+  const claimedNodeIds = new Set<string>()
+  const claimedEdgeIds = new Set<string>()
+
+  // Map zone bom-refs to zone nodes by name (consume each match)
   const zoneNodes = nodes.filter((n) => n.type === 'trustZone')
-  const zones = blueprint.zones ?? []
-  for (let i = 0; i < zones.length && i < zoneNodes.length; i++) {
-    map.set(zones[i]['bom-ref'], { id: zoneNodes[i].id, type: 'node' })
+  for (const zone of blueprint.zones ?? []) {
+    const match = zoneNodes.find((n) => n.data.label === zone.name && !claimedNodeIds.has(n.id))
+    if (match) {
+      claimedNodeIds.add(match.id)
+      map.set(zone['bom-ref'], { id: match.id, type: 'node' })
+    }
   }
 
-  // Map asset bom-refs to asset nodes by position
+  // Map asset bom-refs to asset nodes by name + type (consume each match)
   const assetNodeTypes = ['process', 'datastore', 'humanActor', 'systemActor']
   const assetNodes = nodes.filter((n) => assetNodeTypes.includes(n.type ?? ''))
-  const assets = blueprint.assets ?? []
-  for (let i = 0; i < assets.length && i < assetNodes.length; i++) {
-    map.set(assets[i]['bom-ref'], { id: assetNodes[i].id, type: 'node' })
+  for (const asset of blueprint.assets ?? []) {
+    const expectedNodeType = ASSET_TYPE_TO_NODE_TYPE[asset.type]
+    const match = assetNodes.find((n) =>
+      n.data.label === asset.name
+      && (!expectedNodeType || n.type === expectedNodeType)
+      && !claimedNodeIds.has(n.id)
+    )
+    if (match) {
+      claimedNodeIds.add(match.id)
+      map.set(asset['bom-ref'], { id: match.id, type: 'node' })
+    }
   }
 
-  // Map flow bom-refs to dataFlow edges by position
+  // Map flow bom-refs to dataFlow edges by resolved source + destination,
+  // then by label, consuming each match to handle multiple same-pair flows
   const dataFlowEdges = edges.filter((e) => e.type === 'dataFlow')
-  const flows = blueprint.flows ?? []
-  for (let i = 0; i < flows.length && i < dataFlowEdges.length; i++) {
-    map.set(flows[i]['bom-ref'], { id: dataFlowEdges[i].id, type: 'edge' })
+  for (const flow of blueprint.flows ?? []) {
+    const sourceMapping = map.get(flow.source)
+    const destMapping = map.get(flow.destination)
+    if (!sourceMapping || !destMapping) continue
+
+    const candidates = dataFlowEdges.filter(
+      (e) => e.source === sourceMapping.id && e.target === destMapping.id && !claimedEdgeIds.has(e.id)
+    )
+    const match = candidates.find(
+      (e) => flow.name && (e.data as Record<string, unknown>)?.label === flow.name
+    ) ?? candidates[0]
+    if (match) {
+      claimedEdgeIds.add(match.id)
+      map.set(flow['bom-ref'], { id: match.id, type: 'edge' })
+    }
   }
 
   return map
@@ -891,12 +963,17 @@ function buildBomRefToNodeIdMap(
 function resolveTargetFromBomRef(
   bomRef: string | undefined,
   bomRefMap: Map<string, { id: string; type: 'node' | 'edge' }>,
-  nodes: DiagramNode[]
+  nodes: DiagramNode[],
+  flowBomRefs: Set<string>
 ): { targetId: string; targetType: GuestThreat['targetType'] } {
   if (!bomRef) return { targetId: '', targetType: 'component' }
 
   const mapping = bomRefMap.get(bomRef)
-  if (!mapping) return { targetId: '', targetType: 'component' }
+  if (!mapping) {
+    const inferredType: GuestThreat['targetType'] = flowBomRefs.has(bomRef) ? 'dataflow' : 'component'
+    console.warn(`[CycloneDX import] Could not resolve bom-ref "${bomRef}" to a diagram element. The threat will be unattached.`)
+    return { targetId: '', targetType: inferredType }
+  }
 
   if (mapping.type === 'edge') {
     return { targetId: mapping.id, targetType: 'dataflow' }

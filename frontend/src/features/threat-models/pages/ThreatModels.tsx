@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Share2, ExternalLink, Trash2, Upload, FileJson, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ApiError } from '@/lib/api'
 import { CreateThreatModelDialog } from '@/features/threat-models/components'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -44,7 +45,7 @@ export function ThreatModels() {
 
   const handleImportFile = useCallback((file: File) => {
     if (!file.name.endsWith('.json')) {
-      setImportError('Only .json files are accepted.')
+      setImportError('Only .json or .cdx.json files are accepted.')
       return
     }
     setImportError(null)
@@ -54,6 +55,13 @@ export function ThreatModels() {
         setImportResult(data)
       },
       onError: (error) => {
+        if (error instanceof ApiError && error.data) {
+          const data = error.data as Record<string, unknown>
+          if (typeof data.detail === 'string') {
+            setImportError(data.detail)
+            return
+          }
+        }
         setImportError(error instanceof Error ? error.message : 'Import failed')
       },
     })
@@ -159,12 +167,12 @@ export function ThreatModels() {
               >
                 <FileJson className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Drop a .json file here or click to browse
+                  Drop a .json or .cdx.json file here or click to browse
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".json"
+                  accept=".json,.cdx.json"
                   className="hidden"
                   onChange={handleFileChange}
                 />

@@ -19,7 +19,7 @@ import { DataAssetsSection } from './sections/DataAssetsSection'
 import { ComponentInventory } from './sections/ComponentInventory'
 import { StrideSummary } from './sections/StrideSummary'
 import { ThreatAnalysisSection } from './sections/ThreatAnalysisSection'
-import { DismissedThreatsSection } from './sections/DismissedThreatsSection'
+import { TriagedThreatsSection } from './sections/TriagedThreatsSection'
 import { CountermeasureSection } from './sections/CountermeasureSection'
 import { RiskSection } from './sections/RiskSection'
 import { ComplianceSection } from './sections/ComplianceSection'
@@ -89,8 +89,8 @@ function renderSection(sectionId: string, depth: string, data: ReportData) {
       return <StrideSummary threatAnalysis={data.threatAnalysis} />
     case 'threatDetail':
       return <ThreatAnalysisSection threatAnalysis={data.threatAnalysis} />
-    case 'dismissedThreats':
-      return <DismissedThreatsSection dismissedThreats={data.threatAnalysis.dismissedThreats} />
+    case 'triagedThreats':
+      return <TriagedThreatsSection triagedThreats={data.threatAnalysis.triagedThreats} />
     case 'countermeasureStatus':
     case 'gaps':
     case 'waived':

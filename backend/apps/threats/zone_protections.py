@@ -62,11 +62,11 @@ def analyze_zone_protections(threat_model):
                 component_ids.add(component_id)
 
     # Also include analysis-only components
-    analysis_only_ids = OrgsystemComponent.objects.filter(
-        threat_model=threat_model
-    ).exclude(
-        id__in=component_ids
-    ).values_list("id", flat=True)
+    analysis_only_ids = (
+        OrgsystemComponent.objects.filter(threat_model=threat_model)
+        .exclude(id__in=component_ids)
+        .values_list("id", flat=True)
+    )
     component_ids.update(analysis_only_ids)
 
     if not component_ids:
@@ -106,27 +106,33 @@ def analyze_zone_protections(threat_model):
             continue
 
         # Find a matching platform countermeasure in outer zones (also in scope)
-        source_link = CountermeasureThreatLink.objects.filter(
-            component_threat__component_id__in=component_ids,
-            component_threat__component__trust_zone__in=outer_zones,
-            countermeasure__countermeasure_library=gap_cm.countermeasure_library,
-            countermeasure__status="platform",
-            component_threat__isnull=False,
-        ).select_related(
-            "component_threat__component__trust_zone",
-            "countermeasure__countermeasure_library",
-        ).first()
+        source_link = (
+            CountermeasureThreatLink.objects.filter(
+                component_threat__component_id__in=component_ids,
+                component_threat__component__trust_zone__in=outer_zones,
+                countermeasure__countermeasure_library=gap_cm.countermeasure_library,
+                countermeasure__status="platform",
+                component_threat__isnull=False,
+            )
+            .select_related(
+                "component_threat__component__trust_zone",
+                "countermeasure__countermeasure_library",
+            )
+            .first()
+        )
 
         if source_link:
-            suggestions.append({
-                "target_countermeasure_id": gap_cm.id,
-                "target_component_name": component.name,
-                "target_zone_name": zone.name,
-                "source_component_name": source_link.component_threat.component.name,
-                "source_zone_name": source_link.component_threat.component.trust_zone.name,
-                "countermeasure_name": gap_cm.countermeasure_library.name,
-                "control_type": gap_cm.countermeasure_library.control_type,
-            })
+            suggestions.append(
+                {
+                    "target_countermeasure_id": gap_cm.id,
+                    "target_component_name": component.name,
+                    "target_zone_name": zone.name,
+                    "source_component_name": source_link.component_threat.component.name,
+                    "source_zone_name": source_link.component_threat.component.trust_zone.name,
+                    "countermeasure_name": gap_cm.countermeasure_library.name,
+                    "control_functions": gap_cm.countermeasure_library.control_functions,
+                }
+            )
 
     return suggestions
 

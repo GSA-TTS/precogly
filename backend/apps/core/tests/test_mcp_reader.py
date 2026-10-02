@@ -164,7 +164,7 @@ class CatalogReadingTests(TestCase):
         CountermeasureLibrary.objects.create(
             name="Parameterised queries",
             description="Bind values instead of concatenating.",
-            control_type="preventive",
+            control_functions=["preventive"],
             cost="low",
             default_status="gap",
         )

@@ -20,11 +20,11 @@ High-level overview for leadership. Surfaces the STRIDE summary, countermeasure 
 
 ### Technical
 
-Detailed analysis for engineers. Includes full architecture, data assets, components and data flows, individual threat detail (including dismissed threats), all countermeasure categories (status, gaps, waived, and inherited), and a complete findings and action items list. The risk register is shown in summary form.
+Detailed analysis for engineers. Includes full architecture, data assets, components and data flows, individual threat detail (including triaged threats), all countermeasure categories (status, gaps, waived, and inherited), and a complete findings and action items list. The risk register is shown in summary form.
 
 ### Compliance
 
-Audit-ready view organized around framework coverage. Contains the full compliance mapping and cross-framework mappings, dismissed threats, all countermeasure categories, the risk register, assumptions review, compliance-specific findings, and a completion status checklist. Data assets and the STRIDE summary appear in summary form.
+Audit-ready view organized around framework coverage. Contains the full compliance mapping and cross-framework mappings, triaged threats, all countermeasure categories, the risk register, assumptions review, compliance-specific findings, and a completion status checklist. Data assets and the STRIDE summary appear in summary form.
 
 ### Full Report
 
@@ -43,7 +43,7 @@ The table below shows which sections appear in each report type. **Full** means 
 | Components and Data Flows| --        | Full      | --         | Full |
 | STRIDE Summary           | Full      | Full      | Summary    | Full |
 | Threat Detail            | --        | Full      | --         | Full |
-| Dismissed Threats        | --        | Full      | Full       | Full |
+| Triaged Threats          | --        | Full      | Full       | Full |
 | Countermeasure Status    | Full      | Full      | Full       | Full |
 | Gaps                     | Top 3     | Full      | Full       | Full |
 | Waived Countermeasures   | Count     | Full      | Full       | Full |

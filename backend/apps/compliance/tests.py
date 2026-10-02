@@ -109,7 +109,7 @@ class SectionCodeRenameNoLongerCascadesTests(TestCase):
             qualified_slug="section-338-test-cm-pack/section-338-countermeasure",
             name="Section 338 Countermeasure",
             description="",
-            control_type="preventive",
+            control_functions=["preventive"],
         )
 
     def test_countermeasure_mapping_survives_section_code_rename(self):
@@ -289,7 +289,7 @@ class OrphanedMappingConsumersDontCrashTests(TestCase):
             qualified_slug="section-338-consumers-cm-pack/section-338-consumers-cm",
             name="Consumers Countermeasure",
             description="",
-            control_type="preventive",
+            control_functions=["preventive"],
         )
         # One live mapping, one orphaned (requirement already nulled) --
         # exercises both branches in a single queryset.

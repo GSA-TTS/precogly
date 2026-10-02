@@ -25,13 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   deriveThreatStatus,
   THREAT_STATUS_CONFIG,
 } from '../../types/threat-analysis'
 import type { ComponentThreat, CountermeasureStatus } from '../../types/threat-analysis'
-
-const CONTROL_TYPES = ['preventive', 'detective', 'corrective', 'deterrent', 'recovery', 'compensating', 'procedural']
+import { isActiveThreat } from '@/types/triage'
+import { CONTROL_FUNCTIONS, CONTROL_NATURES } from '@/types/controls'
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: 'bg-blue-100 text-blue-800',
@@ -61,16 +62,19 @@ export function CanvasThreatSection({
   const [editingCountermeasure, setEditingCountermeasure] = useState<{
     id: number
     name: string
-    controlType: string
+    controlFunctions: string[]
+    controlNature: string
   } | null>(null)
   const [editName, setEditName] = useState('')
-  const [editControlType, setEditControlType] = useState('preventive')
+  const [editControlFunctions, setEditControlFunctions] = useState<string[]>([])
+  const [editControlNature, setEditControlNature] = useState('')
   const updateCountermeasure = useUpdateCountermeasure()
 
-  const openCountermeasureEditor = (id: number, name: string, controlType?: string) => {
-    setEditingCountermeasure({ id, name, controlType: controlType || 'preventive' })
+  const openCountermeasureEditor = (id: number, name: string, controlFunctions?: string[], controlNature?: string) => {
+    setEditingCountermeasure({ id, name, controlFunctions: controlFunctions || [], controlNature: controlNature || '' })
     setEditName(name)
-    setEditControlType(controlType || 'preventive')
+    setEditControlFunctions(controlFunctions || [])
+    setEditControlNature(controlNature || '')
   }
 
   const saveCountermeasure = () => {
@@ -78,7 +82,7 @@ export function CanvasThreatSection({
     updateCountermeasure.mutate(
       {
         countermeasureId: editingCountermeasure.id,
-        data: { countermeasureName: editName.trim(), controlType: editControlType },
+        data: { countermeasureName: editName.trim(), controlFunctions: editControlFunctions, controlNature: editControlNature },
       },
       {
         onSuccess: () => {
@@ -92,7 +96,7 @@ export function CanvasThreatSection({
 
   const threats: ComponentThreat[] = threatData?.componentThreats
     ? threatData.componentThreats.filter(
-        (t) => t.componentId === canvasId && !t.dismissed
+        (t) => t.componentId === canvasId && isActiveThreat(t.triageStatus)
       )
     : []
 
@@ -224,7 +228,7 @@ export function CanvasThreatSection({
                                   size="icon"
                                   className="h-6 w-6"
                                   aria-label={`Edit ${countermeasure.countermeasureName || 'countermeasure'}`}
-                                  onClick={() => openCountermeasureEditor(parsed.id!, countermeasure.countermeasureName || countermeasure.countermeasureId, countermeasure.controlType)}
+                                  onClick={() => openCountermeasureEditor(parsed.id!, countermeasure.countermeasureName || countermeasure.countermeasureId, countermeasure.controlFunctions, countermeasure.controlNature)}
                                   disabled={parsed.type !== 'backend' || parsed.id === null}
                                 >
                                   <Pencil className="h-3 w-3" />
@@ -283,11 +287,31 @@ export function CanvasThreatSection({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dfd-countermeasure-type">Control type</Label>
-                      <Select value={editControlType} onValueChange={setEditControlType}>
-                        <SelectTrigger id="dfd-countermeasure-type"><SelectValue /></SelectTrigger>
+                      <Label>Control Functions</Label>
+                      <div className="flex flex-wrap gap-3">
+                        {CONTROL_FUNCTIONS.map((fn) => (
+                          <label key={fn.value} className="flex items-center gap-1.5 text-sm">
+                            <Checkbox
+                              checked={editControlFunctions.includes(fn.value)}
+                              onCheckedChange={(checked) => {
+                                setEditControlFunctions((prev) =>
+                                  checked
+                                    ? [...prev, fn.value]
+                                    : prev.filter((v) => v !== fn.value)
+                                )
+                              }}
+                            />
+                            {fn.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dfd-countermeasure-nature">Control Nature</Label>
+                      <Select value={editControlNature} onValueChange={setEditControlNature}>
+                        <SelectTrigger id="dfd-countermeasure-nature"><SelectValue placeholder="Select nature..." /></SelectTrigger>
                         <SelectContent>
-                          {CONTROL_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {CONTROL_NATURES.map((nature) => <SelectItem key={nature.value} value={nature.value}>{nature.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

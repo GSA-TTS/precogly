@@ -680,7 +680,10 @@ def _generate_countermeasures_for_threat(threat_instance):
                 "countermeasure_description": countermeasure_library.description
                 if countermeasure_library
                 else "",
-                "control_type": countermeasure_library.control_type
+                "control_functions": countermeasure_library.control_functions
+                if countermeasure_library
+                else [],
+                "control_nature": countermeasure_library.control_nature
                 if countermeasure_library
                 else "",
             },

@@ -99,7 +99,8 @@ COUNTERMEASURE_LIBRARY_ROWS: list[dict[str, object]] = [
     {
         "id": 14,
         "name": "API Gateway API Keys",
-        "controlType": "preventive",
+        "controlFunctions": ["preventive"],
+        "controlNature": "technical",
         "cost": "low",
         "defaultStatus": "gap",
         "sourcePack": 13,
@@ -109,7 +110,8 @@ COUNTERMEASURE_LIBRARY_ROWS: list[dict[str, object]] = [
     {
         "id": 18,
         "name": "API Gateway CloudWatch Logging",
-        "controlType": "detective",
+        "controlFunctions": ["detective"],
+        "controlNature": "technical",
         "cost": "medium",
         "defaultStatus": "gap",
         "sourcePack": 13,

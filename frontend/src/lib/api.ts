@@ -218,6 +218,47 @@ export const api = {
   },
 }
 
+// Paginated list endpoints
+
+/** One page of a DRF `PageNumberPagination` response. */
+export interface Page<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+/**
+ * Fetch one page of a list endpoint.
+ *
+ * List endpoints are paginated by default, but a viewset may set
+ * `pagination_class = None` and return a bare array — many do. Both shapes come
+ * back as a `Page` so callers never branch: a bare array is reported as a single
+ * page holding everything.
+ *
+ * `pageSize` is capped server-side by `ClientSizedPagination.max_page_size`;
+ * asking for more silently yields the cap rather than erroring.
+ */
+export async function getPage<T>(
+  endpoint: string,
+  params: { page?: number; pageSize?: number } = {}
+): Promise<Page<T>> {
+  const query = new URLSearchParams()
+  if (params.page !== undefined) query.set('page', String(params.page))
+  // Snake case deliberately. The camelCase parser rewrites request bodies and
+  // leaves query strings alone, so DRF reads this key verbatim as `page_size`.
+  if (params.pageSize !== undefined) query.set('page_size', String(params.pageSize))
+
+  const separator = endpoint.includes('?') ? '&' : '?'
+  const url = query.size > 0 ? `${endpoint}${separator}${query}` : endpoint
+
+  const response = await apiFetch<Page<T> | T[]>(url)
+  if (Array.isArray(response)) {
+    return { count: response.length, next: null, previous: null, results: response }
+  }
+  return response
+}
+
 // Auth API
 export interface LoginCredentials {
   email: string

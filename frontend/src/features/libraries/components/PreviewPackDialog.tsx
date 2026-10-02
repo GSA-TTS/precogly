@@ -253,11 +253,11 @@ function PreviewTabs({ preview }: { preview: PackPreviewResponse }) {
                           Platform
                         </Badge>
                       )}
-                      {cm.controlType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {cm.controlType}
+                      {cm.controlFunctions?.map((fn) => (
+                        <Badge key={fn} variant="secondary" className="text-xs capitalize">
+                          {fn}
                         </Badge>
-                      )}
+                      ))}
                       {cm.cost && <CostBadge cost={cm.cost} />}
                     </div>
                   </div>

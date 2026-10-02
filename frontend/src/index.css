@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "./theme.css";
 
+@custom-variant touch (@media (hover: none));
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

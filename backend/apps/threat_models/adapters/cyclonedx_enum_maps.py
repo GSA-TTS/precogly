@@ -11,7 +11,7 @@ ASSET_TYPE_TO_CATEGORY = {
     "container": "process",
     "service": "process",
     "subsystem": "process",
-    "system": "process",
+    "system": "external_system_actor",
     "gateway": "process",
     "api": "process",
     "device": "process",

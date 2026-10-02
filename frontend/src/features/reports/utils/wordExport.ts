@@ -95,7 +95,7 @@ function buildSummarySection(data: ReportData): (Paragraph | Table)[] {
       ['Metric', 'Count'],
       [
         ['Total Active Threats', String(s.totalActiveThreats)],
-        ['Total Dismissed Threats', String(s.totalDismissedThreats)],
+        ['Total Triaged Threats', String(s.totalTriagedThreats)],
         ['Total Countermeasures', String(s.totalCountermeasures)],
         ['Open Gaps', String(s.totalGaps)],
         ['Waived Countermeasures', String(s.totalWaived)],
@@ -371,18 +371,18 @@ function buildStrideSummarySection(data: ReportData): (Paragraph | Table)[] {
   ]
 }
 
-function buildDismissedThreatsSection(data: ReportData): (Paragraph | Table)[] {
-  const dismissed = data.threatAnalysis.dismissedThreats
+function buildTriagedThreatsSection(data: ReportData): (Paragraph | Table)[] {
+  const triaged = data.threatAnalysis.triagedThreats
   return [
-    h1('9. Dismissed Threats'),
+    h1('9. Triaged Threats'),
     spacer(),
-    ...(dismissed.length > 0
+    ...(triaged.length > 0
       ? [buildTable(
-          [3240, 2880, 3240],
-          ['Threat Name', 'Component / Data Flow', 'Dismissal Reason'],
-          dismissed.map((t) => [t.threatName, t.componentName ?? t.flowLabel ?? '—', t.dismissalReason]),
+          [2400, 2160, 1800, 2880],
+          ['Threat Name', 'Component / Data Flow', 'Triage Status', 'Decision Rationale'],
+          triaged.map((t) => [t.threatName, t.componentName ?? t.flowLabel ?? '—', t.triageStatus, t.decisionRationale]),
         ) as Paragraph | Table]
-      : [para('No dismissed threats.') as Paragraph | Table]),
+      : [para('No triaged threats.') as Paragraph | Table]),
     spacer(),
   ]
 }
@@ -461,7 +461,7 @@ function buildCountermeasuresSection(data: ReportData): (Paragraph | Table)[] {
         .join(', ') || '—'
       rows.push([
         cm.countermeasureName,
-        cm.controlType,
+        (cm.controlFunctions || []).join(', '),
         cm.status,
         cm.priority,
         standards,
@@ -669,7 +669,7 @@ export async function exportWordDoc(
     pageBreak(),
     ...buildThreatAnalysisSection(data),
     pageBreak(),
-    ...buildDismissedThreatsSection(data),
+    ...buildTriagedThreatsSection(data),
     pageBreak(),
     ...buildCountermeasureStatusSection(data),
     pageBreak(),

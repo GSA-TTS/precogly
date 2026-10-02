@@ -202,7 +202,8 @@ class CountermeasureLibrarySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
-            "control_type",
+            "control_functions",
+            "control_nature",
             "cost",
             "default_status",
             "source_pack",
@@ -232,7 +233,8 @@ class CountermeasureLibraryListSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
-            "control_type",
+            "control_functions",
+            "control_nature",
             "cost",
             "default_status",
             "source_pack",
@@ -281,8 +283,11 @@ class ComponentInstanceThreatSerializer(serializers.ModelSerializer):
     threat_personas = serializers.SerializerMethodField()
     threat_sources = serializers.SerializerMethodField()
 
-    # Write fields - accept threat_name for custom threats
+    # Write fields - accept threat_name/threat_description for custom threats
     threat_name = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+    threat_description = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
 
@@ -294,14 +299,15 @@ class ComponentInstanceThreatSerializer(serializers.ModelSerializer):
             "component_name",
             "threat_library",
             "threat_name",
+            "threat_description",
             "threat_name_display",
             "taxonomy_entries",
             "inherent_severity",
             "residual_severity",
             "status",
             "severity_scoring_metadata",
-            "is_dismissed",
-            "dismissal_reason",
+            "triage_status",
+            "decision_rationale",
             "format_metadata",
             "display_order",
             "impact_description",
@@ -365,8 +371,11 @@ class DataFlowInstanceThreatSerializer(serializers.ModelSerializer):
     threat_personas = serializers.SerializerMethodField()
     threat_sources = serializers.SerializerMethodField()
 
-    # Write fields - accept threat_name for custom threats
+    # Write fields - accept threat_name/threat_description for custom threats
     threat_name = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+    threat_description = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
 
@@ -378,14 +387,15 @@ class DataFlowInstanceThreatSerializer(serializers.ModelSerializer):
             "flow_label",
             "threat_library",
             "threat_name",
+            "threat_description",
             "threat_name_display",
             "taxonomy_entries",
             "inherent_severity",
             "residual_severity",
             "status",
             "severity_scoring_metadata",
-            "is_dismissed",
-            "dismissal_reason",
+            "triage_status",
+            "decision_rationale",
             "format_metadata",
             "display_order",
             "impact_description",
@@ -493,7 +503,8 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
 
     # Read fields - prefer model's own fields, fallback to countermeasure_library
     countermeasure_name_display = serializers.SerializerMethodField()
-    control_type_display = serializers.SerializerMethodField()
+    control_functions_display = serializers.SerializerMethodField()
+    control_nature_display = serializers.SerializerMethodField()
     verified_by_email = serializers.EmailField(
         source="verified_by.email", read_only=True
     )
@@ -509,7 +520,10 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
     countermeasure_description = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
-    control_type = serializers.CharField(
+    control_functions = serializers.ListField(
+        child=serializers.CharField(), required=False, write_only=True
+    )
+    control_nature = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
     threat_id = serializers.IntegerField(write_only=True, required=False)
@@ -528,8 +542,10 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             "countermeasure_name",
             "countermeasure_name_display",
             "countermeasure_description",
-            "control_type",
-            "control_type_display",
+            "control_functions",
+            "control_functions_display",
+            "control_nature",
+            "control_nature_display",
             "effectiveness",
             "status",
             "priority",
@@ -556,7 +572,8 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "countermeasure_name_display",
-            "control_type_display",
+            "control_functions_display",
+            "control_nature_display",
             "verified_by_email",
             "assigned_owner_email",
             "threat_links",
@@ -570,13 +587,21 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             return obj.countermeasure_library.name
         return None
 
-    def get_control_type_display(self, obj):
-        """Return control type from model field or countermeasure_library."""
-        if obj.control_type:
-            return obj.control_type
+    def get_control_functions_display(self, obj):
+        """Return control functions from model field or countermeasure_library."""
+        if obj.control_functions:
+            return obj.control_functions
         if obj.countermeasure_library:
-            return obj.countermeasure_library.control_type
-        return None
+            return obj.countermeasure_library.control_functions
+        return []
+
+    def get_control_nature_display(self, obj):
+        """Return control nature from model field or countermeasure_library."""
+        if obj.control_nature:
+            return obj.control_nature
+        if obj.countermeasure_library:
+            return obj.countermeasure_library.control_nature
+        return ""
 
     def create(self, validated_data):
         threat_id = validated_data.pop("threat_id", None)
@@ -905,7 +930,7 @@ class RiskDetailSerializer(serializers.ModelSerializer):
                         else "flow",
                         "threat_name": threat.threat_name,
                         "status": threat.status,
-                        "is_dismissed": threat.is_dismissed,
+                        "triage_status": threat.triage_status,
                     }
                 )
         return result
@@ -1022,7 +1047,7 @@ class RiskThreatSerializer(serializers.ModelSerializer):
     threat_type = serializers.SerializerMethodField()
     threat_name = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
-    is_dismissed = serializers.SerializerMethodField()
+    triage_status = serializers.SerializerMethodField()
 
     class Meta:
         model = RiskThreat
@@ -1032,7 +1057,7 @@ class RiskThreatSerializer(serializers.ModelSerializer):
             "threat_type",
             "threat_name",
             "status",
-            "is_dismissed",
+            "triage_status",
         ]
 
     def _get_threat(self, obj):
@@ -1053,9 +1078,9 @@ class RiskThreatSerializer(serializers.ModelSerializer):
         threat = self._get_threat(obj)
         return threat.status if threat else None
 
-    def get_is_dismissed(self, obj):
+    def get_triage_status(self, obj):
         threat = self._get_threat(obj)
-        return threat.is_dismissed if threat else None
+        return threat.triage_status if threat else None
 
 
 class ThreatPersonaSerializer(serializers.ModelSerializer):

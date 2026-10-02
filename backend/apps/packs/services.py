@@ -466,6 +466,9 @@ def _extract_pack_preview(pack_dir: Path, pack_data: dict) -> dict:
                         "slug": cm.get("slug", cm.get("id", "")),
                         "name": cm.get("name", ""),
                         "control_type": cm.get("control_type", ""),
+                        "control_functions": cm.get("control_functions")
+                        or ([cm["control_type"]] if cm.get("control_type") else []),
+                        "control_nature": cm.get("control_nature", ""),
                         "cost": cm.get("cost", ""),
                         "default_status": cm.get("default_status", "gap"),
                         "description": cm.get("description", ""),
@@ -955,16 +958,16 @@ def validate_pack(pack_path: Path) -> ValidationResult:
         except Exception:
             logger.debug("Failed to parse threats.yaml for validation")
 
-    # Countermeasures must have 'id', check for duplicates, and validate control_type/cost enums
-    valid_control_types = {
+    # Countermeasures must have 'id', check for duplicates, and validate control fields/cost enums
+    valid_control_functions = {
         "preventive",
         "detective",
         "corrective",
         "deterrent",
         "recovery",
         "compensating",
-        "procedural",
     }
+    valid_control_natures = {"technical", "administrative", "physical"}
     valid_costs = {"low", "medium", "high"}
     cm_file = pack_path / "countermeasures.yaml"
     if cm_file.exists():
@@ -1009,8 +1012,42 @@ def validate_pack(pack_path: Path) -> ValidationResult:
                                 ),
                             )
                         )
+                control_functions_value = cm.get("control_functions", [])
+                if isinstance(control_functions_value, list):
+                    for fn in control_functions_value:
+                        if fn not in valid_control_functions:
+                            warnings.append(
+                                ValidationWarning(
+                                    file="countermeasures.yaml",
+                                    field="control_functions",
+                                    message=(
+                                        f"Countermeasure '{cm_id or f'[{i}]'}'"
+                                        f" has unknown control function: '{fn}'"
+                                    ),
+                                    suggestion=f"Use one of: {', '.join(sorted(valid_control_functions))}",
+                                )
+                            )
+                control_nature_value = cm.get("control_nature", "")
+                if (
+                    control_nature_value
+                    and control_nature_value not in valid_control_natures
+                ):
+                    warnings.append(
+                        ValidationWarning(
+                            file="countermeasures.yaml",
+                            field="control_nature",
+                            message=(
+                                f"Countermeasure '{cm_id or f'[{i}]'}'"
+                                f" has unknown control_nature: '{control_nature_value}'"
+                            ),
+                            suggestion=f"Use one of: {', '.join(sorted(valid_control_natures))}",
+                        )
+                    )
                 control_type_value = cm.get("control_type", "")
-                if control_type_value and control_type_value not in valid_control_types:
+                if (
+                    control_type_value
+                    and control_type_value not in valid_control_functions
+                ):
                     warnings.append(
                         ValidationWarning(
                             file="countermeasures.yaml",
@@ -1018,8 +1055,12 @@ def validate_pack(pack_path: Path) -> ValidationResult:
                             message=(
                                 f"Countermeasure '{cm_id or f'[{i}]'}'"
                                 f" has unknown control_type: '{control_type_value}'"
+                                " (legacy field, prefer control_functions)"
                             ),
-                            suggestion=f"Use one of: {', '.join(sorted(valid_control_types))}",
+                            suggestion=(
+                                "Use control_functions with one of:"
+                                f" {', '.join(sorted(valid_control_functions))}"
+                            ),
                         )
                     )
                 cost_value = cm.get("cost", "")
@@ -1895,7 +1936,57 @@ def sync_all_packs_from_source(
     # costs the re-read.
     reconcile_taxonomy_joins_from_source(packs)
 
+    # Fourth pass: re-apply cross-pack threat-countermeasure and
+    # component-threat joins. Same ordering issue as taxonomy joins:
+    # pack A may reference threats/countermeasures from pack B via
+    # qualified slugs (e.g. "ai/llm-prompt-injection"), but pack B
+    # may not have been imported yet when pack A's joins were loaded.
+    # Re-reading the joins once all packs are in the database resolves
+    # every cross-pack reference that was missed on the first pass.
+    reconcile_cross_pack_joins_from_source(packs)
+
     return results
+
+
+def reconcile_cross_pack_joins_from_source(
+    packs: list["PackInfo"] | None = None,
+) -> int:
+    """Re-apply every pack's component-threat and threat-countermeasure joins.
+
+    Cross-pack joins (those using qualified slugs like "ai/llm-prompt-injection")
+    resolve by database lookup. If the referenced pack has not been imported yet,
+    the lookup returns None and a warning is logged. Re-reading the joins after
+    all packs are imported resolves these dangling references.
+
+    Both loaders are idempotent (update_or_create / M2M .add()), so re-running
+    for already-resolved joins is a harmless no-op.
+
+    Returns:
+        Total number of join matches resolved across all packs.
+    """
+    if packs is None:
+        packs = discover_packs_from_source()
+
+    total = 0
+    for pack_info in packs:
+        pack = LibraryPack.objects.filter(slug=pack_info.slug).first()
+        if not pack:
+            continue
+        joins_dir = Path(pack_info.path) / "joins"
+        if not joins_dir.exists():
+            continue
+
+        components_threats_file = joins_dir / "components-threats.yaml"
+        if components_threats_file.exists():
+            total += _load_component_threat_joins(pack, components_threats_file)
+
+        threats_countermeasures_file = joins_dir / "threats-countermeasures.yaml"
+        if threats_countermeasures_file.exists():
+            total += _load_threat_countermeasure_joins(
+                pack, threats_countermeasures_file
+            )
+
+    return total
 
 
 def reconcile_taxonomy_joins_from_source(
@@ -2494,7 +2585,9 @@ def _load_countermeasures(
                 "slug": cm_id,
                 "name": cm.get("name", cm_id),
                 "description": cm.get("description", ""),
-                "control_type": cm.get("control_type", "preventive"),
+                "control_functions": cm.get("control_functions")
+                or ([cm["control_type"]] if cm.get("control_type") else ["preventive"]),
+                "control_nature": cm.get("control_nature", ""),
                 "cost": cm.get("cost", "medium"),
                 "default_status": cm.get("default_status", "gap"),
                 "customization_status": "original",
