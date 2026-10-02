@@ -66,9 +66,13 @@ jobs:
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ matrix.image }}
+          # type=semver reads the version from a pushed tag by default, and this
+          # job runs on a push to main, so it would produce no version tags.
+          # Feed it release-please's tag instead; enable= skips it on manual
+          # dispatch, where there is no tag.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ needs.release-please.outputs.tag_name }},enable=${{ needs.release-please.outputs.release_created == 'true' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release-please.outputs.tag_name }},enable=${{ needs.release-please.outputs.release_created == 'true' }}
             type=sha
 
       - name: Build and push Docker image
