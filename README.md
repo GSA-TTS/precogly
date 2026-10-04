@@ -69,7 +69,7 @@ Precogly is designed for enterprise workflows, but smaller organizations can als
 ### Tech Stack
 
 - **Frontend:** React 19, TypeScript, Tailwind CSS, shadcn/ui, React Flow
-- **Backend:** Django 5.1, Django REST Framework, PostgreSQL 16
+- **Backend:** Django 5.2, Django REST Framework, PostgreSQL 16
 - **Infrastructure:** Docker, nginx (production)
 
 ### Roadmap
