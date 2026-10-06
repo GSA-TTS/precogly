@@ -4,12 +4,13 @@ Views for packs app.
 
 from pathlib import Path
 
-from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from django.db import transaction
 
 from apps.core.permissions import IsSecurityTeam
 from apps.diagrams.models import DFDTemplatesLibrary
@@ -366,11 +367,7 @@ class LibraryPackViewSet(viewsets.ReadOnlyModelViewSet):
         """
         from apps.compliance.models import StandardFramework
         from apps.systems.models import ComponentLibrary
-        from apps.threats.models import (
-            CountermeasureLibrary,
-            ExternalTaxonomy,
-            ThreatLibrary,
-        )
+        from apps.threats.models import CountermeasureLibrary, ExternalTaxonomy, ThreatLibrary
 
         pack = self.get_object()
         dry_run = request.query_params.get("dry_run", "false").lower() == "true"
