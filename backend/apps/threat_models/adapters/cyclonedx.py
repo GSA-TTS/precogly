@@ -4,6 +4,7 @@ import copy
 import logging
 import re
 from collections import defaultdict
+from datetime import date
 from uuid import uuid4
 
 from django.conf import settings
@@ -29,6 +30,8 @@ from .cyclonedx_enum_maps import (
 logger = logging.getLogger(__name__)
 
 PRECOGLY_VERSION = getattr(settings, "PRECOGLY_VERSION", "0.1.0")
+
+PORTABLE_PRIORITY_VALUES = {"none", "low", "medium", "high", "critical"}
 
 
 def _canonical_nist_control_id(value):
@@ -1017,6 +1020,14 @@ class CycloneDxAdapter(BaseAdapter):
                 props.append(
                     {"name": "precogly:control-nature", "value": control_nature}
                 )
+            if cm.priority and cm.priority != "none":
+                props.append({"name": "precogly:priority", "value": cm.priority})
+            if cm.due_date:
+                props.append(
+                    {"name": "precogly:due-date", "value": cm.due_date.isoformat()}
+                )
+            if cm.required_for_release:
+                props.append({"name": "precogly:required-for-release", "value": "true"})
             if props:
                 control["properties"] = props
 
@@ -1594,6 +1605,41 @@ class CycloneDxAdapter(BaseAdapter):
             cdx_meta["origination_present"] = True
         is_inherited = origination in ("inherited", "shared")
 
+        priority = props.get("precogly:priority", "none")
+        if priority not in PORTABLE_PRIORITY_VALUES:
+            msg = (
+                f"Control '{name}': invalid precogly:priority '{priority}'; "
+                "defaulting to 'none'."
+            )
+            logger.warning(msg)
+            warnings.append(msg)
+            priority = "none"
+
+        due_date = None
+        if due_date_value := props.get("precogly:due-date"):
+            try:
+                due_date = date.fromisoformat(due_date_value)
+            except ValueError:
+                msg = (
+                    f"Control '{name}': invalid precogly:due-date "
+                    f"'{due_date_value}'; ignoring it."
+                )
+                logger.warning(msg)
+                warnings.append(msg)
+
+        required_for_release = False
+        if required_value := props.get("precogly:required-for-release"):
+            normalized_required = required_value.strip().lower()
+            if normalized_required in {"true", "false"}:
+                required_for_release = normalized_required == "true"
+            else:
+                msg = (
+                    f"Control '{name}': invalid precogly:required-for-release "
+                    f"'{required_value}'; defaulting to false."
+                )
+                logger.warning(msg)
+                warnings.append(msg)
+
         evidence_url = next(
             (
                 ref.get("url", "")
@@ -1614,6 +1660,9 @@ class CycloneDxAdapter(BaseAdapter):
             is_inherited=is_inherited,
             inherited_from_component_name=provider_system or "",
             evidence_url=evidence_url,
+            priority=priority,
+            due_date=due_date,
+            required_for_release=required_for_release,
             format_metadata={"cyclonedx": cdx_meta},
         )
         resolver.register("control", bom_ref, cm)
