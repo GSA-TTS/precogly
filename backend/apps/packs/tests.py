@@ -1,7 +1,6 @@
 """Tests for path-based pack discovery, O(1) lookup (issue #33),
 taxonomy reference validation (issue #26), and pack validation gaps (issue #10)."""
 
-import importlib.util
 import tempfile
 from pathlib import Path
 from unittest import mock
@@ -9,6 +8,7 @@ from unittest import mock
 import yaml
 from django.test import SimpleTestCase, TestCase, override_settings
 
+from apps.packs.generate_nist_800_53_pack import build_pack, canonical_control_id
 from apps.packs.services import (
     ImportResult,
     _find_pack_dir,
@@ -50,22 +50,12 @@ def _write_pack(base_dir: Path, relative_path: str, slug: str, **overrides) -> P
     return pack_dir
 
 
-def _load_nist_generator():
-    path = Path(__file__).resolve().parents[3] / "scripts/generate_nist_800_53_pack.py"
-    spec = importlib.util.spec_from_file_location("generate_nist_800_53_pack", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 class NistPackGeneratorTests(SimpleTestCase):
     def test_canonical_control_id_preserves_enhancement_identity(self):
-        generator = _load_nist_generator()
-        self.assertEqual(generator.canonical_control_id("ac-02"), "AC-2")
-        self.assertEqual(generator.canonical_control_id("ac-2.01"), "AC-2(1)")
+        self.assertEqual(canonical_control_id("ac-02"), "AC-2")
+        self.assertEqual(canonical_control_id("ac-2.01"), "AC-2(1)")
 
     def test_build_pack_preserves_names_prose_parameters_and_hierarchy(self):
-        generator = _load_nist_generator()
         document = {
             "catalog": {
                 "uuid": "catalog-uuid",
@@ -116,9 +106,7 @@ class NistPackGeneratorTests(SimpleTestCase):
             }
         }
 
-        requirements = generator.build_pack(document, "digest")["frameworks"][0][
-            "requirements"
-        ]
+        requirements = build_pack(document, "digest")["frameworks"][0]["requirements"]
 
         self.assertEqual(requirements[0]["section_code"], "AC-2")
         self.assertEqual(requirements[0]["name"], "Account Management")
