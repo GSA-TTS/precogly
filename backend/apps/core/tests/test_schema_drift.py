@@ -1,5 +1,6 @@
 """Tests for read-only live database schema drift detection."""
 
+from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -47,6 +48,7 @@ class SchemaDriftTests(TestCase):
             "table": "example",
             "column": "stale",
         }
+        output = StringIO()
         with (
             patch(
                 "apps.core.management.commands.check_schema_drift.inspect_schema_drift",
@@ -54,4 +56,13 @@ class SchemaDriftTests(TestCase):
             ),
             self.assertRaises(CommandError),
         ):
-            call_command("check_schema_drift", "--json")
+            call_command("check_schema_drift", "--json", stdout=output)
+
+        self.assertJSONEqual(
+            output.getvalue(),
+            {
+                "ok": False,
+                "finding_count": 1,
+                "findings": [finding],
+            },
+        )

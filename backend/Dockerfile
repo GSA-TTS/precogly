@@ -61,7 +61,7 @@ WORKDIR /app/backend
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py check_schema_drift && python manage.py seed && python manage.py runserver 0.0.0.0:8000"]
 
 # ---- Production ----
 FROM base AS prod
@@ -88,4 +88,4 @@ RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py check_schema_drift && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2"]
