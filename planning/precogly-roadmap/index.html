@@ -1,0 +1,2274 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for Precogly — the open-source threat modeling platform">
+      
+      
+      
+        <link rel="canonical" href="https://precogly.github.io/precogly/planning/precogly-roadmap/">
+      
+      
+        <link rel="prev" href="../../recipes/eu-banking/">
+      
+      
+        <link rel="next" href="../../api/overview/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>SSPP Roadmap & Maintainability Assessment - Precogly Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#precogly-roadmap-sspp-driven-feature-plan-maintainability-assessment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Precogly Documentation" class="md-header__button md-logo" aria-label="Precogly Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Precogly Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              SSPP Roadmap & Maintainability Assessment
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/precogly/precogly" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    precogly/precogly
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Precogly Documentation" class="md-nav__button md-logo" aria-label="Precogly Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Precogly Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/precogly/precogly" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    precogly/precogly
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/local-podman/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Podman (rootless)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/cloud-gov-sso/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloud.gov SSO (Keycloak)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/library-packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library Packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/dfd-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DFD Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/threat-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/threat-model-as-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/zone-protections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zone Protections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/platform-controls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Controls
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/completion-status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Completion Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reference-images/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Images
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/org-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Org Hierarchy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/roles-and-permissions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roles and Permissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/connected-systems-tm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connected Systems & TMs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/magic-links/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Magic Links
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/creating-threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating a Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/end-to-end-assessment-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Assessment Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/guest-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guest Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/pentests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pentest Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/importing-exporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Importing & Exporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/compliance-mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance Mapping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/report-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/collaborative-review-and-handoff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collaborative Review and Handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/ai-features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/ai-threat-model-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Threat Model Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Recipes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recipes/iec-62443/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IEC 62443
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recipes/eu-banking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EU Banking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Planning
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Planning
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSPP Roadmap & Maintainability Assessment
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSPP Roadmap & Maintainability Assessment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-issue-review-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Issue Review Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-implementation-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Implementation Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Implementation Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-poam-data-model-fields-issues-82-81" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — POA&amp;M data model fields (issues #82, #81)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-cdx-import-completeness-audit-issue-31-remainder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — CDX import completeness audit (issue #31 remainder)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-pack-icon-manifest-issue-95-scoped-down" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Pack icon manifest (issue #95, scoped down)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-guest-mode-fips-199-baseline-architecture-wizard-issue-96" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Guest-mode FIPS 199 + baseline architecture wizard (issue #96)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-nested-projects-hierarchical-decomposition-issue-227" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Nested projects / hierarchical decomposition (issue #227)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-code-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not code work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-long-term-maintainability-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Long-Term Maintainability Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-upstream-contribution-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Upstream Contribution Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Upstream Contribution Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overall-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overall recommendation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/development-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/creating-library-packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating Library Packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-issue-review-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Issue Review Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-implementation-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Implementation Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Implementation Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-poam-data-model-fields-issues-82-81" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — POA&amp;M data model fields (issues #82, #81)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-cdx-import-completeness-audit-issue-31-remainder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — CDX import completeness audit (issue #31 remainder)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-pack-icon-manifest-issue-95-scoped-down" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Pack icon manifest (issue #95, scoped down)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-guest-mode-fips-199-baseline-architecture-wizard-issue-96" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Guest-mode FIPS 199 + baseline architecture wizard (issue #96)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-nested-projects-hierarchical-decomposition-issue-227" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Nested projects / hierarchical decomposition (issue #227)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-code-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not code work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-long-term-maintainability-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Long-Term Maintainability Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-upstream-contribution-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Upstream Contribution Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Upstream Contribution Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overall-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overall recommendation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="precogly-roadmap-sspp-driven-feature-plan-maintainability-assessment">Precogly Roadmap: SSPP-Driven Feature Plan &amp; Maintainability Assessment<a class="headerlink" href="#precogly-roadmap-sspp-driven-feature-plan-maintainability-assessment" title="Permanent link">&para;</a></h1>
+<p><em>Draft, 2026-09-15. Source: open issues in <a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp">GSA-TTS/TTSE-petrified-forest-sspp</a> that request Precogly changes: #227, #226, #96, #95, #82, #81, #31, #28.</em></p>
+<p>This fork (<code>JJediny/precogly</code>) is a downstream consumer of <code>precogly/precogly</code>, used as the threat-modeling backend for the SSPP pipeline. <code>main</code> was just reconciled with <code>upstream/main</code> (merge <code>453f931</code>, 79 commits, through the <code>v0.4.0</code> release) and <code>feat/cloudgov-keycloak-sso</code> / <code>feat/compliance-matrix-view</code> were rebased/fast-forwarded onto it and pushed. This document plans the SSPP-driven feature work on top of that clean base and assesses whether to build features in the fork or upstream them.</p>
+<h2 id="1-issue-review-summary">1. Issue Review Summary<a class="headerlink" href="#1-issue-review-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Title</th>
+<th>Ask</th>
+<th>Current state in Precogly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/31">#31</a></td>
+<td>Bulk-import enhancements for oscal-vault CDX</td>
+<td>Consume <code>satisfies[]</code> on CDX controls → <code>InstanceCountermeasureStandard</code>; map <code>vault:origination</code>/<code>vault:providing-system</code> → <code>is_inherited</code>/<code>inherited_from_component_name</code>; evidence URL from <code>externalReferences</code></td>
+<td><strong>Mostly implemented already.</strong> <code>cyclonedx.py</code> adapter reads <code>satisfies</code> (line ~852), <code>vault:origination</code>/<code>nist:control-id</code>/<code>crm:control-id</code> (line ~1270), sets <code>is_inherited</code>/<code>inherited_from_component_name</code> (line ~1284). Verify evidence-URL mapping and whether <code>StandardRequirement</code> FK-miss fallback (store <code>section_code</code>/<code>framework_name</code> even when unresolved) is handled.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/82">#82</a></td>
+<td>U1–U6 data model improvements for POA&amp;M/provenance</td>
+<td>Add <code>poam_id</code>, <code>scheduled_completion</code>, <code>days_overdue</code> property, <code>source</code> field</td>
+<td><strong>Not implemented.</strong> <code>InstanceCountermeasure</code> (<code>backend/apps/threats/models.py</code>) has <code>due_date</code>, <code>external_ticket_url</code>, <code>format_metadata</code> but no <code>poam_id</code> column, no <code>scheduled_completion</code>, no <code>days_overdue</code> property, no <code>source</code> field.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/81">#81</a></td>
+<td>POA&amp;M = InstanceCountermeasure with due_date, not a new model</td>
+<td>Clarifies #82; also asks SSPP-side <code>bulk_import_to_precogly.py</code>/<code>generate_poam_augment.py</code> changes (out of Precogly's scope)</td>
+<td>Confirms #82's approach is correct; the Precogly-side ask is the same as #82 U1/U2.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/96">#96</a></td>
+<td>Guest-mode guided walkthrough (FIPS 199 → baseline arch → control baseline)</td>
+<td>New 3-step wizard producing a downloadable CDX, no login</td>
+<td><strong>Partially implemented.</strong> <code>frontend/src/features/guest-editor/</code> and <code>/guest</code> route already exist (DFD editor + threat analysis, no auth). The FIPS 199 categorization step and baseline-architecture-pack-selection step are new.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/95">#95</a></td>
+<td>SVG/React icons for library-pack components</td>
+<td><code>icons.yaml</code> per pack, SVG bundling, React Flow icon rendering, <code>crm:icon</code> CDX property</td>
+<td><strong>Superseded/partially done.</strong> Upstream merged <code>ComponentLibrary.icon_svg</code> (migration <code>0006_componentlibrary_icon_svg.py</code>) with a stored-XSS fix (<code>#516</code>) that renders icons via <code>&lt;img&gt;</code> base64 data URI. The pack-level <code>icons.yaml</code> + <code>crm:icon</code> CDX property + <code>make pack-install-&lt;pack&gt;</code> SVG copy step are still missing.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/227">#227</a></td>
+<td>Nested projects / hierarchical sub-diagrams</td>
+<td>New component type linking to a child threat model; breadcrumb drill-down; boundary port mapping; rolled-up threat metrics</td>
+<td><strong>Not implemented for cross-threat-model nesting.</strong> <code>OrgsystemComponent.parent</code> already supports a 3-level <em>process</em> hierarchy within one diagram (<code>backend/apps/systems/models.py:252</code>), and <code>ThreatModelRelationship</code> links two threat models, but there is no "nested project" component type, no cross-TM breadcrumb navigation, no boundary-port mapping, no metric roll-up. This is the largest ask in the batch.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/226">#226</a></td>
+<td>Platform right-sizing pitch (cloud.gov / FCS / sandbox)</td>
+<td>Not a Precogly code change — a methodology/process proposal for choosing platform tier per workload, using SSPP as the evidence layer</td>
+<td><strong>Out of scope for Precogly code.</strong> No action item translates to a Precogly PR; it's a GSA-internal architecture decision framework that <em>consumes</em> SSPP+Precogly data. Track as informational only.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/GSA-TTS/TTSE-petrified-forest-sspp/issues/28">#28</a></td>
+<td>Bulk-import 25 vault systems + seed NIST 800-53r5 pack</td>
+<td>Operational backlog (run import script, fix CF pack bundling)</td>
+<td><strong>Operational, not a code feature.</strong> The blocker is that <code>libraries/packs/</code> isn't bundled at <code>cf push</code> time — confirmed by repo memory notes; already tracked as a deploy/ops issue, not a code change.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-implementation-plan">2. Implementation Plan<a class="headerlink" href="#2-implementation-plan" title="Permanent link">&para;</a></h2>
+<p>Ordered by dependency and risk, not issue number. Each phase assumes the previous phase's branch has merged to <code>main</code> first — this backlog touches shared model files (<code>backend/apps/threats/models.py</code>, <code>cyclonedx.py</code>) repeatedly, so serializing avoids compounding merge conflicts.</p>
+<h3 id="phase-1-poam-data-model-fields-issues-82-81">Phase 1 — POA&amp;M data model fields (issues #82, #81)<a class="headerlink" href="#phase-1-poam-data-model-fields-issues-82-81" title="Permanent link">&para;</a></h3>
+<p><strong>Branch:</strong> <code>feat/poam-fields</code>. <strong>Size:</strong> small, additive migration.
+- Add to <code>InstanceCountermeasure</code> (<code>backend/apps/threats/models.py</code>): <code>poam_id</code> (indexed <code>CharField</code>), <code>scheduled_completion</code> (<code>DateField</code>), <code>days_overdue</code> (computed <code>@property</code>, not a DB column). Decide on <code>source</code> field (enum: <code>manual</code>, <code>vault-import</code>, <code>pentest</code>) — needs a short design note since it overlaps conceptually with <code>PentestFinding</code>; recommend a <code>CharField</code> with choices rather than a new model, per the issue's own recommendation.
+- Migration + <code>InstanceCountermeasureSerializer</code> field additions (<code>backend/apps/threats/serializers.py</code>).
+- Add <code>?has_poam=true</code> / <code>?overdue=true</code> filter params to the relevant list view.
+- Update <code>cyclonedx.py</code> <code>_import_control</code> to populate <code>poam_id</code>/<code>scheduled_completion</code> from <code>poam:*</code> CDX properties (mirrors what <code>bulk_import_to_precogly.py</code> in the SSPP repo already assumes).
+- Tests: extend <code>backend/apps/threats/tests/</code> (or add one) for the new property and filter; extend <code>backend/apps/compliance/tests/test_matrix.py</code> since <code>matrix.py</code> already reads <code>poam.get("poam_id", ...)</code> from <code>format_metadata</code> — once the column exists, <code>matrix.py</code> should read the column instead and this is a one-line change plus a test update.
+- <strong>Risk:</strong> low. No breaking changes to existing <code>format_metadata["poam"]</code> consumers if the column is populated <em>alongside</em> the existing JSON key during a transition period.</p>
+<h3 id="phase-2-cdx-import-completeness-audit-issue-31-remainder">Phase 2 — CDX import completeness audit (issue #31 remainder)<a class="headerlink" href="#phase-2-cdx-import-completeness-audit-issue-31-remainder" title="Permanent link">&para;</a></h3>
+<p><strong>Branch:</strong> <code>feat/cdx-import-audit</code>. <strong>Size:</strong> small, mostly test-writing.
+- Most of #31 is already implemented (<code>satisfies[]</code>, <code>vault:origination</code>, <code>nist:control-id</code>). Write characterization tests in <code>backend/apps/threat_models/tests/</code> against a CDX fixture with <code>satisfies[]</code> present but the referenced <code>StandardRequirement</code> missing, to confirm the fallback (<code>section_code</code>/<code>framework_name</code> stored even when FK unresolved) actually works — the issue calls this out as a requirement, not yet confirmed by a test.
+- Confirm evidence-URL mapping from CDX <code>externalReferences</code> → <code>InstanceCountermeasure.evidence_url</code> exists; add if missing.
+- <strong>Risk:</strong> very low — this phase is verification, not new behavior.</p>
+<h3 id="phase-3-pack-icon-manifest-issue-95-scoped-down">Phase 3 — Pack icon manifest (issue #95, scoped down)<a class="headerlink" href="#phase-3-pack-icon-manifest-issue-95-scoped-down" title="Permanent link">&para;</a></h3>
+<p><strong>Branch:</strong> <code>feat/pack-icon-manifest</code>. <strong>Size:</strong> medium.
+- Upstream already solved <em>component-instance</em> icon storage/rendering safely (<code>ComponentLibrary.icon_svg</code>, base64 <code>&lt;img&gt;</code> rendering, XSS-fixed in <code>#516</code>). Do <strong>not</strong> reintroduce <code>dangerouslySetInnerHTML</code> — reuse the existing safe pattern.
+- Remaining scope: a pack-level <code>icons.yaml</code> (<code>libraries/packs/&lt;pack&gt;/icons.yaml</code>) mapping component-name → icon key, consumed by the pack install/seed pipeline (<code>backend/apps/packs/services.py</code>) to populate <code>ComponentLibrary.icon_svg</code> at pack-install time instead of per-component manual upload.
+- Add <code>crm:icon</code> CDX property passthrough in <code>cyclonedx.py</code> import as an interim signal when a pack isn't installed locally.
+- <strong>Risk:</strong> medium — touches the pack install pipeline; needs a security review pass on any new SVG ingestion path (validate/sanitize SVG content before storing in <code>icon_svg</code>, same as the fix in <code>#516</code>).</p>
+<h3 id="phase-4-guest-mode-fips-199-baseline-architecture-wizard-issue-96">Phase 4 — Guest-mode FIPS 199 + baseline architecture wizard (issue #96)<a class="headerlink" href="#phase-4-guest-mode-fips-199-baseline-architecture-wizard-issue-96" title="Permanent link">&para;</a></h3>
+<p><strong>Branch:</strong> <code>feat/guest-onboarding-wizard</code>. <strong>Size:</strong> large, frontend-heavy.
+- Extends the existing <code>/guest</code> route and <code>frontend/src/features/guest-editor/</code>.
+- Step 1 (FIPS 199): new form component computing high-water-mark categorization client-side, writing <code>fips199:*</code> properties into the in-memory CDX draft — no backend change needed since guest mode already works off exported CDX.
+- Step 2 (baseline pack selection): reuse <code>frontend/src/features/dfd-editor/api/component-library.ts</code> to pre-populate canvas nodes from a selected pack's components; needs a public (unauthenticated) read endpoint for pack component lists if one doesn't already exist for guest mode — check <code>frontend/src/features/libraries/api/libraries.ts</code> auth requirements first.
+- Step 3: existing guest DFD editor + export.
+- <strong>Risk:</strong> medium — new unauthenticated read surface must be scoped carefully (read-only, no tenant data) to avoid the pattern that caused the XSS fix in <code>#516</code> and the <code>ComponentLibraryViewSet</code> read-only restriction; any new guest-facing endpoint should default to read-only and explicitly exclude tenant-scoped data.</p>
+<h3 id="phase-5-nested-projects-hierarchical-decomposition-issue-227">Phase 5 — Nested projects / hierarchical decomposition (issue #227)<a class="headerlink" href="#phase-5-nested-projects-hierarchical-decomposition-issue-227" title="Permanent link">&para;</a></h3>
+<p><strong>Branch:</strong> <code>feat/nested-projects</code> (expect multiple sub-branches). <strong>Size:</strong> large, multi-milestone; propose as its own EPIC rather than one PR.
+- <strong>Data model:</strong> add a "nested project" component subtype or a <code>linked_threat_model</code> FK on <code>OrgsystemComponent</code>/a new <code>NestedProjectComponent</code> proxy, distinct from the existing intra-diagram <code>parent</code> process hierarchy (<code>backend/apps/systems/models.py:252</code>) and from <code>ThreatModelRelationship</code> (which links TMs but has no diagram-canvas semantics).
+- <strong>Boundary port mapping:</strong> external flows into the nested component need a mapping table to entry/exit points on the child diagram — new model, e.g. <code>NestedProjectBoundaryPort</code>.
+- <strong>Frontend:</strong> breadcrumb navigation component (partial precedent exists: <code>ComponentView.tsx</code> already has ancestry-path breadcrumbs for process nodes, <code>hierarchy-utils.ts</code>) — extend that pattern across threat-model boundaries rather than building parallel breadcrumb logic.
+- <strong>Metric roll-up:</strong> aggregate threat counts/completion status from child TM up to parent node; likely a computed serializer field with caching, given <code>ThreatModel</code> completion status is already computed elsewhere (<code>concepts/completion-status.md</code>).
+- <strong>Risk:</strong> high — this changes core diagram semantics and cross-TM permission boundaries (a nested component may reference a TM the current user can't see). Needs an explicit ADR before implementation given the scope; do not start coding without a design doc reviewed by a Precogly maintainer, since this is the kind of "single wrong decision causes downstream effects" case called out in <code>CONTRIBUTING.md</code>.</p>
+<h3 id="not-code-work">Not code work<a class="headerlink" href="#not-code-work" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>#226</strong> (platform right-sizing): no Precogly PR. Track as a cross-repo methodology doc in the SSPP repo; Precogly's role is limited to being a data source (via the compliance-matrix endpoint from <code>feat/compliance-matrix-view</code>).</li>
+<li><strong>#28</strong> (bulk import + pack seeding): operational task against the live cloud.gov deployment (fix <code>cf push</code> to bundle <code>libraries/packs/</code>, then run the import script). Track in repo memory / ops runbook, not as a feature branch.</li>
+</ul>
+<h2 id="3-long-term-maintainability-assessment">3. Long-Term Maintainability Assessment<a class="headerlink" href="#3-long-term-maintainability-assessment" title="Permanent link">&para;</a></h2>
+<p><strong>Upstream velocity is high and the fork is falling behind fast.</strong> <code>upstream/main</code> had 336 commits in the last 60 days and was 79 commits ahead of this fork before today's merge. At that pace, a fork left unsynced for a month accumulates enough drift that every future merge risks conflicts like the two hit in this sync (<code>cyclonedx.py</code>, <code>package.json</code>) — both in files this fork also modifies for its own features (compliance matrix, CDX import). <strong>Recommendation: sync <code>main</code> from upstream at least every 1–2 weeks</strong>, not opportunistically, to keep conflict surface small.</p>
+<p><strong>Bus factor / contributor concentration.</strong> Two contributors (Vikram/Vikramaditya Narayan) account for the large majority of the last 90 days' commits, with <code>AlvinKuruvilla</code>, <code>sidd190</code>, and <code>navesecurity</code> as secondary contributors, several of them clearly focused on security fixes (self-escalation vulnerability, XSS in icon rendering, org-scoping bugs). This is a healthy sign for review quality (security issues are being caught and fixed) but a risk if the primary maintainer's velocity changes — the fork's continued viability depends on upstream staying active.</p>
+<p><strong>CI/CD posture.</strong> Upstream has a real quality gate: <code>ci.yml</code> runs lint (pre-commit, diff-scoped), backend pytest via <code>docker compose</code>, and a separate MCP-package job; <code>security.yml</code> runs secret scanning (gitleaks) as a distinct gate from correctness CI. This fork's own feature branches (<code>feat/compliance-matrix-view</code>) have tests that <strong>cannot run in this workstation's environment</strong> (no local Postgres, rootless podman broken) — per repo memory, <code>test_matrix.py</code> was never actually executed locally and relies entirely on upstream CI to validate. This is a maintainability risk specific to this environment, not to the project.</p>
+<p><strong>Fork-specific technical debt.</strong>
+- <code>podman-compose.yml</code>/local dev setup requires manual bind-mount workarounds because the local container image predates several now-required dependencies (<code>django-oauth-toolkit</code>, <code>mozilla-django-oidc</code>, <code>django-csp</code>, <code>whitenoise</code>, <code>PyJWT[crypto]</code>) — this is drift between the fork's Docker image and its own <code>pyproject.toml</code>, not an upstream problem, and should be fixed by rebuilding the base image rather than perpetuating the bind-mount workaround.
+- The cloud.gov/Keycloak SSO branch and the compliance-matrix branch are fork-only features with no upstream PR yet. As shown by this sync, they are cheap to carry today (both were trivial fast-forwards/rebases) specifically <em>because</em> they were kept small and touched few files. Larger fork-only features (e.g. Phase 5 nested projects) will not stay this cheap — the risk compounds with feature size, not just time.</p>
+<p><strong>Security posture of planned work.</strong> Two of the planned phases touch areas upstream has already had to patch for security bugs: icon rendering (stored XSS, <code>#516</code>) and any new unauthenticated/guest-facing endpoint (self-escalation vulnerability precedent, <code>#066dfb6</code>). Phase 3 and Phase 4 above call out reusing the already-fixed-safe patterns explicitly to avoid regressing those fixes.</p>
+<h2 id="4-upstream-contribution-assessment">4. Upstream Contribution Assessment<a class="headerlink" href="#4-upstream-contribution-assessment" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Planned work</th>
+<th>Contribute upstream?</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1 (POA&amp;M fields)</td>
+<td><strong>Yes — upstream first.</strong></td>
+<td>Issue #82 explicitly frames this as an "Upstream Precogly model suggestions" ask. It's a small, additive, non-breaking schema change with clear value to any Precogly user doing compliance tracking, not just this SSPP use case. Low conflict risk, high reuse value.</td>
+</tr>
+<tr>
+<td>Phase 2 (import audit)</td>
+<td><strong>Yes, if gaps found.</strong></td>
+<td>If the fallback-storage test in Phase 2 reveals an actual bug (not just missing test coverage), fix and PR it upstream — issue #31 originated as an upstream-facing request and the submitter (per the issue) already offered to open a PR. Coordinate to avoid duplicate work.</td>
+</tr>
+<tr>
+<td>Phase 3 (pack icon manifest)</td>
+<td><strong>Partially — core icon safety already upstreamed by others; the pack-manifest layer is more fork/SSPP-specific.</strong></td>
+<td>The general <code>icon_svg</code> + safe-rendering mechanism is already upstream. A <code>libraries/packs/&lt;pack&gt;/icons.yaml</code> convention is closer to this fork's specific pack pipeline (<code>libraries/packs/</code>) and the SSPP repo's <code>data/packs/</code>. Propose upstream only if the pack-install flow (<code>backend/apps/packs/services.py</code>) is itself upstream code shared by all Precogly users — confirm this before committing to an upstream PR.</td>
+</tr>
+<tr>
+<td>Phase 4 (guest wizard)</td>
+<td><strong>Yes, with a design review first.</strong></td>
+<td>Guest mode already exists upstream (<code>/guest</code> route, <code>GuestOnlyNotice</code>), so this extends an existing upstream feature rather than forking it. Any new unauthenticated endpoint needs upstream maintainer sign-off given the project's security-conscious CI/review culture (<code>CONTRIBUTING.md</code>'s "Owl's Orders": human review non-negotiable, screenshots required for UI PRs).</td>
+</tr>
+<tr>
+<td>Phase 5 (nested projects)</td>
+<td><strong>No — start with an upstream design discussion (ADR/RFC issue), not a fork branch.</strong></td>
+<td>This is the highest-risk, highest-scope item (new diagram semantics, cross-TM permission model). Given upstream's commit velocity and active maintainership, building this in isolation in the fork risks either (a) permanent unmergeable drift, or (b) duplicating work upstream does independently. Open a design-discussion issue against <code>precogly/precogly</code> first (issue #227 already exists as the tracking issue in the SSPP repo — cross-link or move the design conversation to the Precogly repo where the maintainers can weigh in before code is written).</td>
+</tr>
+<tr>
+<td>#226, #28</td>
+<td><strong>N/A.</strong></td>
+<td>Not Precogly code changes; no upstream PR applicable.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="overall-recommendation">Overall recommendation<a class="headerlink" href="#overall-recommendation" title="Permanent link">&para;</a></h3>
+<p>Given upstream's activity level, this fork's long-term health depends on minimizing fork-only surface area. Concretely:
+1. Keep the sync cadence tight (biweekly) — already recorded in repo memory as a process to repeat.
+2. Land Phases 1–2 as upstream PRs directly rather than fork-only commits; they were explicitly requested by the issue author as upstream suggestions.
+3. Treat Phase 5 as an upstream RFC, not a fork feature branch, given its size and the project's active, review-heavy maintainer culture.
+4. Reserve fork-only branches (<code>feat/cloudgov-keycloak-sso</code> pattern) for genuinely deployment-specific concerns (SSO provider choice, cloud.gov manifest) that have no generic upstream value — that is the correct use of a fork, and this sync confirms it stays cheap to maintain when scoped that way.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
