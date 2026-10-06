@@ -61,6 +61,7 @@ TAXONOMY_PACKS = [
 ]
 
 STANDARD_PACKS = [
+    "standards/nist-800-53-r5",
     "standards/owasp-top-10",
     "standards/soc2",
     "standards/nist-csf",

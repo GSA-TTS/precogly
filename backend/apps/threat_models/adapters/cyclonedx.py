@@ -2,6 +2,7 @@
 
 import copy
 import logging
+import re
 from collections import defaultdict
 from uuid import uuid4
 
@@ -28,6 +29,19 @@ from .cyclonedx_enum_maps import (
 logger = logging.getLogger(__name__)
 
 PRECOGLY_VERSION = getattr(settings, "PRECOGLY_VERSION", "0.1.0")
+
+
+def _canonical_nist_control_id(value):
+    """Normalize NIST IDs without rewriting other framework identifiers."""
+    match = re.fullmatch(
+        r"\s*([A-Za-z]{2,3})\s*-\s*0*(\d+)(?:\s*[.(]\s*0*(\d+)\s*\)?)?\s*",
+        value,
+    )
+    if not match:
+        return value
+    family, number, enhancement = match.groups()
+    base = f"{family.upper()}-{int(number)}"
+    return f"{base}({int(enhancement)})" if enhancement else base
 
 
 class TmBomImportError(Exception):
@@ -1659,6 +1673,8 @@ class CycloneDxAdapter(BaseAdapter):
                     reference = satisfies.get("reference")
                     framework = satisfies.get("framework")
                     if reference and framework:
+                        if framework == "nist-800-53-r5":
+                            reference = _canonical_nist_control_id(reference)
                         requirement = (
                             StandardRequirement.objects.filter(
                                 framework__slug=framework,
