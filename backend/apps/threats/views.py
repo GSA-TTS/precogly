@@ -49,6 +49,7 @@ from .serializers import (
     CountermeasureCommentSerializer,
     CountermeasureLibraryListSerializer,
     CountermeasureLibrarySerializer,
+    CountermeasureTransitionSerializer,
     DataFlowInstanceThreatSerializer,
     ExternalTaxonomySerializer,
     InstanceCountermeasureSerializer,
@@ -69,6 +70,7 @@ from .services import (
     recalculate_risk,
     recalculate_risks_for_threat,
     recalculate_threat_status,
+    transition_countermeasure,
 )
 
 
@@ -816,14 +818,47 @@ class InstanceCountermeasureViewSet(viewsets.ModelViewSet):
     ]
 
     def perform_update(self, serializer):
-        new_status = serializer.validated_data.get("status")
-        if new_status is not None:
-            current_status = serializer.instance.status
-            _check_platform_status_permission(
-                self.request.user, current_status, new_status
-            )
         instance = serializer.save()
         recalculate_all_threats_for_countermeasure(instance)
+
+    @action(detail=True, methods=["post"])
+    def transition(self, request, pk=None):
+        """Apply a server-enforced countermeasure lifecycle transition."""
+        from django.core.exceptions import ValidationError
+
+        countermeasure = self.get_object()
+        input_serializer = CountermeasureTransitionSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        transition_data = input_serializer.validated_data
+        target_status = transition_data["status"]
+
+        owner = None
+        if "assigned_owner" in transition_data:
+            from django.contrib.auth import get_user_model
+
+            owner_id = transition_data["assigned_owner"]
+            if owner_id is not None:
+                owner = get_user_model().objects.filter(pk=owner_id).first()
+                if owner is None:
+                    return Response(
+                        {"assigned_owner": ["User not found."]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        try:
+            countermeasure = transition_countermeasure(
+                countermeasure,
+                target_status,
+                request.user,
+                owner=owner,
+                evidence_url=transition_data.get("evidence_url"),
+                note=transition_data.get("note", ""),
+            )
+        except ValidationError as error:
+            return Response(error.message_dict, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(countermeasure)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
     def link(self, request, pk=None):
