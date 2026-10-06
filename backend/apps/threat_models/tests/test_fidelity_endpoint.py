@@ -50,6 +50,20 @@ class ThreatModelFidelityEndpointTests(APITestCase):
             "componentLibraryLinked",
         ):
             self.assertEqual(data[key], 0.0)
+        self.assertEqual(data["schemaVersion"], "2")
+        self.assertEqual(
+            data["transportCoverage"],
+            {
+                "controlId": 0.0,
+                "implementationProse": 0.0,
+                "evidenceUrl": 0.0,
+                "originationMarker": 0.0,
+            },
+        )
+        self.assertEqual(data["nativeCoverage"]["requirementMapping"], 0.0)
+        self.assertIsNone(data["nativeCoverage"]["editableScope"])
+        self.assertFalse(data["authorizationReadiness"]["supported"])
+        self.assertFalse(data["authorizationReadiness"]["ready"])
 
     def test_partial_coverage_computed_correctly(self):
         library_entry = CountermeasureLibrary.objects.create(
@@ -88,6 +102,29 @@ class ThreatModelFidelityEndpointTests(APITestCase):
         self.assertEqual(data["inheritedFlagCoverage"], 0.5)
         self.assertEqual(data["componentLibraryLinked"], 0.5)
         self.assertEqual(data["complianceStandardCoverage"], 0.0)
+        self.assertEqual(data["transportCoverage"]["controlId"], 0.5)
+        self.assertEqual(data["transportCoverage"]["originationMarker"], 0.5)
+        self.assertEqual(data["nativeCoverage"]["requirementMapping"], 0.0)
+        self.assertEqual(data["nativeCoverage"]["libraryLink"], 0.5)
+
+    def test_transport_id_does_not_imply_native_requirement_mapping(self):
+        InstanceCountermeasure.objects.create(
+            threat_model=self.tm,
+            countermeasure_name="Transport-only NIST control",
+            countermeasure_description="Imported prose",
+            format_metadata={
+                "cyclonedx": {
+                    "nist_control_id": "AC-2",
+                    "origination_present": True,
+                }
+            },
+        )
+
+        data = self._get().json()
+
+        self.assertEqual(data["transportCoverage"]["controlId"], 1.0)
+        self.assertEqual(data["nativeCoverage"]["requirementMapping"], 0.0)
+        self.assertFalse(data["authorizationReadiness"]["ready"])
 
     def test_fidelity_scoped_to_requested_threat_model_only(self):
         other_tm = ThreatModel.objects.create(
