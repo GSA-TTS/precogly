@@ -25,6 +25,10 @@ class ThreatModelFidelitySerializer(serializers.Serializer):
     compliance_standard_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
     inherited_flag_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
     component_library_linked = serializers.FloatField(min_value=0.0, max_value=1.0)
+    schema_version = serializers.CharField()
+    transport_coverage = serializers.DictField()
+    native_coverage = serializers.DictField()
+    authorization_readiness = serializers.DictField()
 
 
 class ThreatModelReferenceImageSerializer(serializers.ModelSerializer):

@@ -1251,6 +1251,31 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                 "compliance_standard_coverage": _fraction("compliance_standard"),
                 "inherited_flag_coverage": _fraction("inherited_flag"),
                 "component_library_linked": _fraction("component_library"),
+                "schema_version": "2",
+                "transport_coverage": {
+                    "control_id": _fraction("nist_id"),
+                    "implementation_prose": _fraction("prose"),
+                    "evidence_url": _fraction("evidence_url"),
+                    "origination_marker": _fraction("inherited_flag"),
+                },
+                "native_coverage": {
+                    "requirement_mapping": _fraction("compliance_standard"),
+                    "library_link": _fraction("component_library"),
+                    "editable_scope": None,
+                    "provider_assertion": None,
+                    "immutable_verification": None,
+                    "review_decision": None,
+                },
+                "authorization_readiness": {
+                    "supported": False,
+                    "ready": False,
+                    "blockers": [
+                        "editable-scope-not-modeled",
+                        "provider-assertion-not-modeled",
+                        "immutable-verification-not-modeled",
+                        "review-decision-not-modeled",
+                    ],
+                },
             }
         )
         return Response(serializer.data)
