@@ -269,7 +269,7 @@ export function useCreateComponentThreat() {
       impactDescription?: string
       threatActorText?: string
     }) => api.post<ComponentInstanceThreat>('/component-threats/', data),
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: threatKeys.all })
       queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
       queryClient.invalidateQueries({ queryKey: ['threat-models'] })
@@ -509,6 +509,39 @@ export function useUpdateCountermeasure() {
         data
       )
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: threatKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })
+      queryClient.invalidateQueries({ queryKey: ['threat-models'] })
+      queryClient.invalidateQueries({ queryKey: riskKeys.all })
+    },
+  })
+}
+
+/** Apply a server-enforced countermeasure lifecycle transition. */
+export function useTransitionCountermeasure() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      countermeasureId,
+      status,
+      evidenceUrl,
+      assignedOwner,
+    }: {
+      countermeasureId: number
+      status: CountermeasureStatus
+      evidenceUrl?: string
+      assignedOwner?: number
+    }) =>
+      api.post<ComponentInstanceCountermeasure>(
+        `/countermeasures/${countermeasureId}/transition/`,
+        {
+          status,
+          ...(evidenceUrl !== undefined && { evidenceUrl }),
+          ...(assignedOwner !== undefined && { assignedOwner }),
+        }
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: threatKeys.all })
       queryClient.invalidateQueries({ queryKey: ['threat-model-threats'] })

@@ -574,6 +574,7 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             "countermeasure_name_display",
             "control_functions_display",
             "control_nature_display",
+            "verified_by",
             "verified_by_email",
             "assigned_owner_email",
             "threat_links",
@@ -603,6 +604,18 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             return obj.countermeasure_library.control_nature
         return ""
 
+    def validate(self, attrs):
+        if self.instance:
+            blocked = {"status", "verified_by", "verifiedBy"} & set(self.initial_data)
+            if blocked:
+                raise serializers.ValidationError(
+                    dict.fromkeys(
+                        sorted(blocked),
+                        "Use the transition action to change lifecycle state.",
+                    )
+                )
+        return attrs
+
     def create(self, validated_data):
         threat_id = validated_data.pop("threat_id", None)
         threat_type = validated_data.pop("threat_type", "component")
@@ -615,6 +628,15 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
                 link_kwargs["component_threat_id"] = threat_id
             CountermeasureThreatLink.objects.get_or_create(**link_kwargs)
         return instance
+
+
+class CountermeasureTransitionSerializer(serializers.Serializer):
+    """Input contract for a server-enforced countermeasure status transition."""
+
+    status = serializers.ChoiceField(choices=InstanceCountermeasure.Status.choices)
+    assigned_owner = serializers.IntegerField(required=False, allow_null=True)
+    evidence_url = serializers.URLField(required=False, allow_blank=True)
+    note = serializers.CharField(required=False, allow_blank=True)
 
 
 class VerificationTestSerializer(serializers.ModelSerializer):

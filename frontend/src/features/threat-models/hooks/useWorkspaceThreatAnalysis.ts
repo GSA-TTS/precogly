@@ -11,6 +11,7 @@ import { deriveThreatStatus } from '@/features/dfd-editor/types/threat-analysis'
 import {
   useThreatModelThreats,
   useUpdateCountermeasure,
+  useTransitionCountermeasure,
   useUpdateTriageStatus,
   useUpdateFlowTriageStatus,
   parseCountermeasureId,
@@ -54,6 +55,7 @@ export function useWorkspaceThreatAnalysis(
 
   // Backend API mutations
   const updateCountermeasureMutation = useUpdateCountermeasure()
+  const transitionCountermeasureMutation = useTransitionCountermeasure()
   const updateTriageStatusMutation = useUpdateTriageStatus()
   const updateFlowTriageStatusMutation = useUpdateFlowTriageStatus()
   const reorderComponentThreatsMutation = useReorderComponentThreats()
@@ -156,12 +158,10 @@ export function useWorkspaceThreatAnalysis(
       const parsed = parseCountermeasureId(countermeasureInstanceId)
 
       if (parsed.type === 'backend' && parsed.id !== null) {
-        updateCountermeasureMutation.mutate({
+        transitionCountermeasureMutation.mutate({
           countermeasureId: parsed.id,
-          data: {
-            status: status as 'platform' | 'gap' | 'planned' | 'verified' | 'waived',
-            ...(notes !== undefined && { evidenceUrl: notes }),
-          },
+          status,
+          ...(notes !== undefined && { evidenceUrl: notes }),
         })
       }
 
@@ -188,7 +188,7 @@ export function useWorkspaceThreatAnalysis(
         }),
       }))
     },
-    [updateCountermeasureMutation]
+    [transitionCountermeasureMutation]
   )
 
   // Assign owner to countermeasure
@@ -205,16 +205,19 @@ export function useWorkspaceThreatAnalysis(
       if (countermeasure) {
         const parsed = parseCountermeasureId(countermeasure.id)
 
-        const data: { assignedOwner: number; status?: CountermeasureStatus } = { assignedOwner: assignee.userId }
-        if (newStatus) {
-          data.status = newStatus
-        }
-
         if (parsed.type === 'backend' && parsed.id !== null) {
-          updateCountermeasureMutation.mutate({
-            countermeasureId: parsed.id,
-            data,
-          })
+          if (newStatus) {
+            transitionCountermeasureMutation.mutate({
+              countermeasureId: parsed.id,
+              status: newStatus,
+              assignedOwner: assignee.userId,
+            })
+          } else {
+            updateCountermeasureMutation.mutate({
+              countermeasureId: parsed.id,
+              data: { assignedOwner: assignee.userId },
+            })
+          }
         }
       }
 
@@ -239,7 +242,7 @@ export function useWorkspaceThreatAnalysis(
         }),
       }))
     },
-    [state.componentThreats, updateCountermeasureMutation]
+    [state.componentThreats, transitionCountermeasureMutation, updateCountermeasureMutation]
   )
 
   // Update countermeasure priority
