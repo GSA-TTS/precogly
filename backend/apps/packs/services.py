@@ -1656,6 +1656,7 @@ def _import_pack(
             or active_countermeasures > 0
             or active_taxonomies > 0
             or active_templates > 0
+            or existing.frameworks.exists()
         )
 
         if has_active_items:
@@ -2665,7 +2666,8 @@ def _load_frameworks(
                 f"Purged {stale_count} stale requirements from framework '{framework_slug}'"
             )
 
-        # Create or update requirements for this framework
+        # Create or update requirements for this framework. Parent links are
+        # resolved in a second pass so YAML ordering is not significant.
         for req_data in framework_data.get("requirements", []):
             section_code = req_data.get("section_code", "")
             if not section_code:
@@ -2675,10 +2677,38 @@ def _load_frameworks(
                 framework=framework,
                 section_code=section_code,
                 defaults={
+                    "name": req_data.get("name", ""),
                     "description": req_data.get("description", ""),
+                    "requirement_type": req_data.get("requirement_type", ""),
+                    "status": req_data.get("status", ""),
+                    "priority": req_data.get("priority", ""),
+                    "acceptance_criteria": req_data.get("acceptance_criteria", []),
+                    "format_metadata": req_data.get("format_metadata", {}),
                 },
             )
             count += 1
+
+        requirements_by_code = {
+            requirement.section_code: requirement
+            for requirement in StandardRequirement.objects.filter(framework=framework)
+        }
+        for req_data in framework_data.get("requirements", []):
+            section_code = req_data.get("section_code", "")
+            requirement = requirements_by_code.get(section_code)
+            if requirement is None:
+                continue
+            parent_code = req_data.get("parent", "")
+            parent = requirements_by_code.get(parent_code) if parent_code else None
+            if parent_code and parent is None:
+                msg = (
+                    f"Requirement '{section_code}' references unknown parent "
+                    f"'{parent_code}' in framework '{framework_slug}'."
+                )
+                logger.warning(msg)
+                import_warnings.append(msg)
+            if requirement.parent_id != (parent.id if parent else None):
+                requirement.parent = parent
+                requirement.save(update_fields=["parent", "updated_at"])
 
     # Activate pending overlays for newly created frameworks
     for framework_slug in created_frameworks:
