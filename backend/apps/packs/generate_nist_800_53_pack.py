@@ -57,6 +57,33 @@ def property_value(item: dict, name: str) -> str:
     )
 
 
+def withdrawn_description(item: dict) -> str:
+    """Describe an official withdrawal using only OSCAL disposition links."""
+    dispositions = [
+        link
+        for link in item.get("links", [])
+        if link.get("rel") in {"incorporated-into", "moved-to"}
+    ]
+    if not dispositions:
+        return "Withdrawn in NIST SP 800-53 Rev. 5."
+
+    labels = {
+        "incorporated-into": "incorporated into",
+        "moved-to": "moved to",
+    }
+    references = []
+    for link in dispositions:
+        target = link["href"].removeprefix("#")
+        control_match = re.match(r"[a-z]{2,3}-\d+(?:\.\d+)?", target.lower())
+        display_target = (
+            canonical_control_id(control_match.group()) if control_match else target
+        )
+        reference = f"{labels[link['rel']]} {display_target}"
+        if reference not in references:
+            references.append(reference)
+    return "Withdrawn in NIST SP 800-53 Rev. 5; " + "; ".join(references) + "."
+
+
 def build_pack(document: dict, source_sha256: str) -> dict:
     catalog = document["catalog"]
     metadata = catalog["metadata"]
@@ -70,10 +97,14 @@ def build_pack(document: dict, source_sha256: str) -> dict:
                 for enhancement in control.get("controls", [])
             )
             for item, parent_id in controls:
+                status = property_value(item, "status")
+                description = statement_prose(item.get("parts", []))
+                if not description and status == "withdrawn":
+                    description = withdrawn_description(item)
                 requirement = {
                     "section_code": canonical_control_id(item["id"]),
                     "name": item.get("title", ""),
-                    "description": statement_prose(item.get("parts", [])),
+                    "description": description,
                     "requirement_type": "enhancement" if parent_id else "control",
                     "format_metadata": {
                         "oscal_id": item["id"],
@@ -87,7 +118,7 @@ def build_pack(document: dict, source_sha256: str) -> dict:
                         ],
                     },
                 }
-                if status := property_value(item, "status"):
+                if status:
                     requirement["status"] = status
                 if parent_id:
                     requirement["parent"] = canonical_control_id(parent_id)
@@ -146,14 +177,15 @@ def main() -> int:
 
     pack = build_pack(json.loads(content), digest)
     requirements = pack["frameworks"][0]["requirements"]
-    empty_active = [
+    empty_requirements = [
         requirement["section_code"]
         for requirement in requirements
-        if not requirement["description"] and requirement.get("status") != "withdrawn"
+        if not requirement["description"]
     ]
-    if empty_active:
+    if empty_requirements:
         raise SystemExit(
-            "active requirements have no statement prose: " + ", ".join(empty_active)
+            "requirements have no statement or withdrawal description: "
+            + ", ".join(empty_requirements)
         )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

@@ -148,7 +148,6 @@ class NistPackGeneratorTests(SimpleTestCase):
                 requirement["section_code"]
                 for requirement in requirements
                 if not requirement["description"]
-                and requirement.get("status") != "withdrawn"
             ]
         )
         self.assertEqual(

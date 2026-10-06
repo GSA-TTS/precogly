@@ -117,7 +117,11 @@ class Nist80053PackTests(TestCase):
         )
 
         self.assertEqual(requirement.status, "withdrawn")
-        self.assertEqual(requirement.description, "")
+        self.assertEqual(
+            requirement.description,
+            "Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-2; "
+            "incorporated into AU-6.",
+        )
         self.assertEqual(
             requirement.format_metadata["disposition_links"][0]["rel"],
             "incorporated-into",

@@ -157,7 +157,7 @@ frameworks:
     parent: AC-12
   - section_code: AC-13
     name: Supervision and Review — Access Control
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-2; incorporated into AU-6.
     requirement_type: control
     format_metadata:
       oscal_id: ac-13
@@ -188,7 +188,7 @@ frameworks:
       disposition_links: []
   - section_code: AC-14(1)
     name: Necessary Uses
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-14.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-14.1
@@ -202,7 +202,7 @@ frameworks:
     parent: AC-14
   - section_code: AC-15
     name: Automated Marking
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-3.
     requirement_type: control
     format_metadata:
       oscal_id: ac-15
@@ -503,7 +503,7 @@ frameworks:
     parent: AC-17
   - section_code: AC-17(5)
     name: Monitoring for Unauthorized Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-17.5
@@ -528,7 +528,7 @@ frameworks:
     parent: AC-17
   - section_code: AC-17(7)
     name: Additional Protection for Security Function Access
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-3(10).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-17.7
@@ -542,7 +542,7 @@ frameworks:
     parent: AC-17
   - section_code: AC-17(8)
     name: Disable Nonsecure Network Protocols
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-17.8
@@ -595,7 +595,7 @@ frameworks:
     parent: AC-18
   - section_code: AC-18(2)
     name: Monitoring Unauthorized Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-18.2
@@ -659,7 +659,7 @@ frameworks:
       disposition_links: []
   - section_code: AC-19(1)
     name: Use of Writable and Portable Storage Devices
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-19.1
@@ -673,7 +673,7 @@ frameworks:
     parent: AC-19
   - section_code: AC-19(2)
     name: Use of Personally Owned Portable Storage Devices
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-19.2
@@ -687,7 +687,7 @@ frameworks:
     parent: AC-19
   - section_code: AC-19(3)
     name: Use of Portable Storage Devices with No Identifiable Owner
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-19.3
@@ -825,7 +825,7 @@ frameworks:
     parent: AC-2
   - section_code: AC-2(10)
     name: Shared and Group Account Credential Change
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-2.10
@@ -1230,7 +1230,7 @@ frameworks:
       disposition_links: []
   - section_code: AC-3(1)
     name: Restricted Access to Privileged Functions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-3.1
@@ -1424,7 +1424,7 @@ frameworks:
     parent: AC-3
   - section_code: AC-3(6)
     name: Protection of User and System Information
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-4; incorporated into SC-28.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-3.6
@@ -1614,7 +1614,7 @@ frameworks:
     parent: AC-4
   - section_code: AC-4(16)
     name: Information Transfers on Interconnected Systems
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-4.16
@@ -1641,7 +1641,7 @@ frameworks:
     parent: AC-4
   - section_code: AC-4(18)
     name: Security Attribute Binding
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-16.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-4.18
@@ -2146,7 +2146,7 @@ frameworks:
       disposition_links: []
   - section_code: AC-7(1)
     name: Automatic Account Lock
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ac-7.1
@@ -2519,7 +2519,7 @@ frameworks:
     parent: AT-3
   - section_code: AT-3(4)
     name: Suspicious Communications and Anomalous System Behavior
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to AT-2(4).
     requirement_type: enhancement
     format_metadata:
       oscal_id: at-3.4
@@ -2562,7 +2562,7 @@ frameworks:
       disposition_links: []
   - section_code: AT-5
     name: Contacts with Security Groups and Associations
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PM-15.
     requirement_type: control
     format_metadata:
       oscal_id: at-5
@@ -2699,7 +2699,7 @@ frameworks:
     parent: AU-10
   - section_code: AU-10(5)
     name: Digital Signatures
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-10.5
@@ -2900,7 +2900,7 @@ frameworks:
     parent: AU-14
   - section_code: AU-14(2)
     name: Capture and Record Content
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-14.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-14.2
@@ -2926,7 +2926,7 @@ frameworks:
     parent: AU-14
   - section_code: AU-15
     name: Alternate Audit Logging Capability
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to AU-5(5).
     requirement_type: control
     format_metadata:
       oscal_id: au-15
@@ -3016,7 +3016,7 @@ frameworks:
       disposition_links: []
   - section_code: AU-2(1)
     name: Compilation of Audit Records from Multiple Sources
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-12.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-2.1
@@ -3030,7 +3030,7 @@ frameworks:
     parent: AU-2
   - section_code: AU-2(2)
     name: Selection of Audit Events by Component
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-12.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-2.2
@@ -3044,7 +3044,7 @@ frameworks:
     parent: AU-2
   - section_code: AU-2(3)
     name: Reviews and Updates
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-2.3
@@ -3058,7 +3058,7 @@ frameworks:
     parent: AU-2
   - section_code: AU-2(4)
     name: Privileged Functions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-6(9).
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-2.4
@@ -3107,7 +3107,7 @@ frameworks:
     parent: AU-3
   - section_code: AU-3(2)
     name: Centralized Management of Planned Audit Record Content
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-3.2
@@ -3279,7 +3279,7 @@ frameworks:
     parent: AU-6
   - section_code: AU-6(10)
     name: Audit Level Adjustment
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-6.10
@@ -3293,7 +3293,7 @@ frameworks:
     parent: AU-6
   - section_code: AU-6(2)
     name: Automated Security Alerts
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-6.2
@@ -3423,7 +3423,7 @@ frameworks:
     parent: AU-7
   - section_code: AU-7(2)
     name: Automatic Sort and Search
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AU-7(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-7.2
@@ -3452,7 +3452,7 @@ frameworks:
       disposition_links: []
   - section_code: AU-8(1)
     name: Synchronization with Authoritative Time Source
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-45(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-8.1
@@ -3466,7 +3466,7 @@ frameworks:
     parent: AU-8
   - section_code: AU-8(2)
     name: Secondary Authoritative Time Source
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-45(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: au-8.2
@@ -3716,7 +3716,7 @@ frameworks:
       disposition_links: []
   - section_code: CA-3(1)
     name: Unclassified National Security System Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-7(25).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-3.1
@@ -3730,7 +3730,7 @@ frameworks:
     parent: CA-3
   - section_code: CA-3(2)
     name: Classified National Security System Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-7(26).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-3.2
@@ -3744,7 +3744,7 @@ frameworks:
     parent: CA-3
   - section_code: CA-3(3)
     name: Unclassified Non-national Security System Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-7(27).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-3.3
@@ -3758,7 +3758,7 @@ frameworks:
     parent: CA-3
   - section_code: CA-3(4)
     name: Connections to Public Networks
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-7(28).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-3.4
@@ -3772,7 +3772,7 @@ frameworks:
     parent: CA-3
   - section_code: CA-3(5)
     name: Restrictions on External System Connections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-7(5).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-3.5
@@ -3814,7 +3814,7 @@ frameworks:
     parent: CA-3
   - section_code: CA-4
     name: Security Certification
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CA-2.
     requirement_type: control
     format_metadata:
       oscal_id: ca-4
@@ -3957,7 +3957,7 @@ frameworks:
     parent: CA-7
   - section_code: CA-7(2)
     name: Types of Assessments
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CA-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ca-7.2
@@ -4205,7 +4205,7 @@ frameworks:
       disposition_links: []
   - section_code: CM-11(1)
     name: Alerts for Unauthorized Installations
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-8(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-11.1
@@ -4324,7 +4324,7 @@ frameworks:
       disposition_links: []
   - section_code: CM-2(1)
     name: Reviews and Updates
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-2.1
@@ -4364,7 +4364,7 @@ frameworks:
     parent: CM-2
   - section_code: CM-2(4)
     name: Unauthorized Software
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-7(4).
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-2.4
@@ -4378,7 +4378,7 @@ frameworks:
     parent: CM-2
   - section_code: CM-2(5)
     name: Authorized Software
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-7(5).
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-2.5
@@ -4637,7 +4637,7 @@ frameworks:
     parent: CM-5
   - section_code: CM-5(2)
     name: Review System Changes
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-3(7).
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-5.2
@@ -4651,7 +4651,7 @@ frameworks:
     parent: CM-5
   - section_code: CM-5(3)
     name: Signed Components
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to CM-14.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-5.3
@@ -4708,7 +4708,7 @@ frameworks:
     parent: CM-5
   - section_code: CM-5(7)
     name: Automatic Implementation of Security Safeguards
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-5.7
@@ -4776,7 +4776,7 @@ frameworks:
     parent: CM-6
   - section_code: CM-6(3)
     name: Unauthorized Change Detection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-6.3
@@ -4790,7 +4790,7 @@ frameworks:
     parent: CM-6
   - section_code: CM-6(4)
     name: Conformance Demonstration
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-6.4
@@ -5059,7 +5059,7 @@ frameworks:
     parent: CM-8
   - section_code: CM-8(5)
     name: No Duplicate Accounting of Components
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cm-8.5
@@ -5211,7 +5211,7 @@ frameworks:
       disposition_links: []
   - section_code: CP-10(1)
     name: Contingency Plan Testing
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CP-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cp-10.1
@@ -5262,7 +5262,7 @@ frameworks:
     parent: CP-10
   - section_code: CP-10(5)
     name: Failover Capability
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-13.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cp-10.5
@@ -5415,7 +5415,7 @@ frameworks:
     parent: CP-2
   - section_code: CP-2(4)
     name: Resume All Mission and Business Functions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CP-2(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: cp-2.4
@@ -5614,7 +5614,7 @@ frameworks:
     parent: CP-4
   - section_code: CP-5
     name: Contingency Plan Update
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CP-2.
     requirement_type: control
     format_metadata:
       oscal_id: cp-5
@@ -5745,7 +5745,7 @@ frameworks:
     parent: CP-7
   - section_code: CP-7(5)
     name: Equivalent Information Security Safeguards
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cp-7.5
@@ -5922,7 +5922,7 @@ frameworks:
     parent: CP-9
   - section_code: CP-9(4)
     name: Protection from Unauthorized Modification
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CP-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: cp-9.4
@@ -6236,7 +6236,7 @@ frameworks:
     parent: IA-2
   - section_code: IA-2(11)
     name: Remote Access — Separate Device
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(6).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-2.11
@@ -6286,7 +6286,7 @@ frameworks:
     parent: IA-2
   - section_code: IA-2(3)
     name: Local Access to Privileged Accounts
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-2.3
@@ -6300,7 +6300,7 @@ frameworks:
     parent: IA-2
   - section_code: IA-2(4)
     name: Local Access to Non-privileged Accounts
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-2.4
@@ -6345,7 +6345,7 @@ frameworks:
     parent: IA-2
   - section_code: IA-2(7)
     name: Network Access to Non-privileged Accounts — Separate Device
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(6).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-2.7
@@ -6372,7 +6372,7 @@ frameworks:
     parent: IA-2
   - section_code: IA-2(9)
     name: Network Access to Non-privileged Accounts — Replay Resistant
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(8).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-2.9
@@ -6413,7 +6413,7 @@ frameworks:
     parent: IA-3
   - section_code: IA-3(2)
     name: Cryptographic Bidirectional Network Authentication
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-3(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-3.2
@@ -6491,7 +6491,7 @@ frameworks:
     parent: IA-4
   - section_code: IA-4(2)
     name: Supervisor Authorization
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-12(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-4.2
@@ -6505,7 +6505,7 @@ frameworks:
     parent: IA-4
   - section_code: IA-4(3)
     name: Multiple Forms of Certification
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-12(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-4.3
@@ -6558,7 +6558,7 @@ frameworks:
     parent: IA-4
   - section_code: IA-4(7)
     name: In-person Registration
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-12(4).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-4.7
@@ -6675,7 +6675,7 @@ frameworks:
     parent: IA-5
   - section_code: IA-5(11)
     name: Hardware Token-based Authentication
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-2(1); incorporated into IA-2(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-5.11
@@ -6806,7 +6806,7 @@ frameworks:
     parent: IA-5
   - section_code: IA-5(3)
     name: In-person or Trusted External Party Registration
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-12(4).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-5.3
@@ -6820,7 +6820,7 @@ frameworks:
     parent: IA-5
   - section_code: IA-5(4)
     name: Automated Support for Password Strength Determination
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-5(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-5.4
@@ -6955,7 +6955,7 @@ frameworks:
     parent: IA-8
   - section_code: IA-8(3)
     name: Use of FICAM-approved Products
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-8(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-8.3
@@ -7021,7 +7021,7 @@ frameworks:
       disposition_links: []
   - section_code: IA-9(1)
     name: Information Exchange
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-9.1
@@ -7035,7 +7035,7 @@ frameworks:
     parent: IA-9
   - section_code: IA-9(2)
     name: Transmission of Decisions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IA-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ia-9.2
@@ -7088,7 +7088,7 @@ frameworks:
       disposition_links: []
   - section_code: IR-10
     name: Integrated Information Security Analysis Team
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to IR-4(11).
     requirement_type: control
     format_metadata:
       oscal_id: ir-10
@@ -7645,7 +7645,7 @@ frameworks:
       disposition_links: []
   - section_code: IR-9(1)
     name: Responsible Personnel
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into IR-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ir-9.1
@@ -7767,7 +7767,7 @@ frameworks:
       disposition_links: []
   - section_code: MA-2(1)
     name: Record Content
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MA-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ma-2.1
@@ -7927,7 +7927,7 @@ frameworks:
     parent: MA-4
   - section_code: MA-4(2)
     name: Document Nonlocal Maintenance
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MA-1; incorporated into MA-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ma-4.2
@@ -8245,7 +8245,7 @@ frameworks:
       disposition_links: []
   - section_code: MP-2(1)
     name: Automated Restricted Access
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-2.1
@@ -8259,7 +8259,7 @@ frameworks:
     parent: MP-2
   - section_code: MP-2(2)
     name: Cryptographic Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-28(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-2.2
@@ -8311,7 +8311,7 @@ frameworks:
       disposition_links: []
   - section_code: MP-4(1)
     name: Cryptographic Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-28(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-4.1
@@ -8362,7 +8362,7 @@ frameworks:
       disposition_links: []
   - section_code: MP-5(1)
     name: Protection Outside of Controlled Areas
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-5.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-5.1
@@ -8376,7 +8376,7 @@ frameworks:
     parent: MP-5
   - section_code: MP-5(2)
     name: Documentation of Activities
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-5.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-5.2
@@ -8402,7 +8402,7 @@ frameworks:
     parent: MP-5
   - section_code: MP-5(4)
     name: Cryptographic Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-28(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-5.4
@@ -8477,7 +8477,7 @@ frameworks:
     parent: MP-6
   - section_code: MP-6(4)
     name: Controlled Unclassified Information
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-6.4
@@ -8491,7 +8491,7 @@ frameworks:
     parent: MP-6
   - section_code: MP-6(5)
     name: Classified Information
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-6.5
@@ -8505,7 +8505,7 @@ frameworks:
     parent: MP-6
   - section_code: MP-6(6)
     name: Media Destruction
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-6.6
@@ -8564,7 +8564,7 @@ frameworks:
       disposition_links: []
   - section_code: MP-7(1)
     name: Prohibit Use Without Owner
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: mp-7.1
@@ -8717,7 +8717,7 @@ frameworks:
       disposition_links: []
   - section_code: PE-10(1)
     name: Accidental and Unauthorized Activation
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-10.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-10.1
@@ -8844,7 +8844,7 @@ frameworks:
     parent: PE-13
   - section_code: PE-13(3)
     name: Automatic Fire Suppression
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-13(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-13.3
@@ -8988,7 +8988,7 @@ frameworks:
       disposition_links: []
   - section_code: PE-18(1)
     name: Facility Site
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to PE-23.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-18.1
@@ -9242,7 +9242,7 @@ frameworks:
     parent: PE-3
   - section_code: PE-3(6)
     name: Facility Penetration Testing
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CA-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-3.6
@@ -9304,7 +9304,7 @@ frameworks:
       disposition_links: []
   - section_code: PE-5(1)
     name: Access to Output by Authorized Individuals
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-5.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-5.1
@@ -9329,7 +9329,7 @@ frameworks:
     parent: PE-5
   - section_code: PE-5(3)
     name: Marking Output Devices
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-22.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-5.3
@@ -9419,7 +9419,7 @@ frameworks:
     parent: PE-6
   - section_code: PE-7
     name: Visitor Control
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-2; incorporated into PE-3.
     requirement_type: control
     format_metadata:
       oscal_id: pe-7
@@ -9466,7 +9466,7 @@ frameworks:
     parent: PE-8
   - section_code: PE-8(2)
     name: Physical Access Records
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PE-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pe-8.2
@@ -9644,7 +9644,7 @@ frameworks:
       disposition_links: []
   - section_code: PL-2(1)
     name: Concept of Operations
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pl-2.1
@@ -9658,7 +9658,7 @@ frameworks:
     parent: PL-2
   - section_code: PL-2(2)
     name: Functional Architecture
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pl-2.2
@@ -9672,7 +9672,7 @@ frameworks:
     parent: PL-2
   - section_code: PL-2(3)
     name: Plan and Coordinate with Other Organizational Entities
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-2.
     requirement_type: enhancement
     format_metadata:
       oscal_id: pl-2.3
@@ -9686,7 +9686,7 @@ frameworks:
     parent: PL-2
   - section_code: PL-3
     name: System Security Plan Update
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-2.
     requirement_type: control
     format_metadata:
       oscal_id: pl-3
@@ -9740,7 +9740,7 @@ frameworks:
     parent: PL-4
   - section_code: PL-5
     name: Privacy Impact Assessment
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into RA-8.
     requirement_type: control
     format_metadata:
       oscal_id: pl-5
@@ -9753,7 +9753,7 @@ frameworks:
     status: withdrawn
   - section_code: PL-6
     name: Security-related Activity Planning
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-2.
     requirement_type: control
     format_metadata:
       oscal_id: pl-6
@@ -10723,7 +10723,7 @@ frameworks:
       disposition_links: []
   - section_code: PS-6(1)
     name: Information Requiring Special Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PS-3.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ps-6.1
@@ -11359,7 +11359,7 @@ frameworks:
     parent: RA-3
   - section_code: RA-4
     name: Risk Assessment Update
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into RA-3.
     requirement_type: control
     format_metadata:
       oscal_id: ra-4
@@ -11409,7 +11409,7 @@ frameworks:
       disposition_links: []
   - section_code: RA-5(1)
     name: Update Tool Capability
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into RA-5.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ra-5.1
@@ -11511,7 +11511,7 @@ frameworks:
     parent: RA-5
   - section_code: RA-5(7)
     name: Automated Detection and Notification of Unauthorized Components
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ra-5.7
@@ -11540,7 +11540,7 @@ frameworks:
     parent: RA-5
   - section_code: RA-5(9)
     name: Penetration Testing and Analyses
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CA-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: ra-5.9
@@ -11945,7 +11945,7 @@ frameworks:
     parent: SA-11
   - section_code: SA-12
     name: Supply Chain Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into sr.
     requirement_type: control
     format_metadata:
       oscal_id: sa-12
@@ -11958,7 +11958,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-12(1)
     name: Acquisition Strategies / Tools / Methods
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-5.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.1
@@ -11972,7 +11972,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(10)
     name: Validate as Genuine and Not Altered
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-4(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.10
@@ -11986,7 +11986,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(11)
     name: Penetration Testing / Analysis of Elements, Processes, and Actors
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-6(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.11
@@ -12000,7 +12000,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(12)
     name: Inter-organizational Agreements
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-8.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.12
@@ -12014,7 +12014,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(13)
     name: Critical Information System Components
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MA-6; incorporated into RA-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.13
@@ -12030,7 +12030,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(14)
     name: Identity and Traceability
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SR-4(1); incorporated into SR-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.14
@@ -12046,7 +12046,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(15)
     name: Processes to Address Weaknesses or Deficiencies
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SR-3.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.15
@@ -12060,7 +12060,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(2)
     name: Supplier Reviews
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.2
@@ -12074,7 +12074,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(3)
     name: Trusted Shipping and Warehousing
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SR-3.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.3
@@ -12088,7 +12088,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(4)
     name: Diversity of Suppliers
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-3(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.4
@@ -12102,7 +12102,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(5)
     name: Limitation of Harm
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-3(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.5
@@ -12116,7 +12116,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(6)
     name: Minimizing Procurement Time
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SR-5(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.6
@@ -12130,7 +12130,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(7)
     name: Assessments Prior to Selection / Acceptance / Update
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-5(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.7
@@ -12144,7 +12144,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(8)
     name: Use of All-source Intelligence
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into RA-3(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.8
@@ -12158,7 +12158,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-12(9)
     name: Operations Security
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-12.9
@@ -12172,7 +12172,7 @@ frameworks:
     parent: SA-12
   - section_code: SA-13
     name: Trustworthiness
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-8.
     requirement_type: control
     format_metadata:
       oscal_id: sa-13
@@ -12185,7 +12185,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-14
     name: Criticality Analysis
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into RA-9.
     requirement_type: control
     format_metadata:
       oscal_id: sa-14
@@ -12198,7 +12198,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-14(1)
     name: Critical Components with No Viable Alternative Sourcing
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-20.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-14.1
@@ -12344,7 +12344,7 @@ frameworks:
     parent: SA-15
   - section_code: SA-15(4)
     name: Threat Modeling and Vulnerability Analysis
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-11(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-15.4
@@ -12420,7 +12420,7 @@ frameworks:
     parent: SA-15
   - section_code: SA-15(9)
     name: Use of Live Data
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-3(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-15.9
@@ -12628,7 +12628,7 @@ frameworks:
     parent: SA-17
   - section_code: SA-18
     name: Tamper Resistance and Detection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-9.
     requirement_type: control
     format_metadata:
       oscal_id: sa-18
@@ -12641,7 +12641,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-18(1)
     name: Multiple Phases of System Development Life Cycle
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-9(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-18.1
@@ -12655,7 +12655,7 @@ frameworks:
     parent: SA-18
   - section_code: SA-18(2)
     name: Inspection of Systems or Components
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-10.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-18.2
@@ -12669,7 +12669,7 @@ frameworks:
     parent: SA-18
   - section_code: SA-19
     name: Component Authenticity
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-11.
     requirement_type: control
     format_metadata:
       oscal_id: sa-19
@@ -12682,7 +12682,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-19(1)
     name: Anti-counterfeit Training
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-11(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-19.1
@@ -12696,7 +12696,7 @@ frameworks:
     parent: SA-19
   - section_code: SA-19(2)
     name: Configuration Control for Component Service and Repair
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-11(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-19.2
@@ -12710,7 +12710,7 @@ frameworks:
     parent: SA-19
   - section_code: SA-19(3)
     name: Component Disposal
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-12.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-19.3
@@ -12724,7 +12724,7 @@ frameworks:
     parent: SA-19
   - section_code: SA-19(4)
     name: Anti-counterfeit Scanning
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SR-11(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-19.4
@@ -12786,7 +12786,7 @@ frameworks:
       disposition_links: []
   - section_code: SA-21(1)
     name: Validation of Screening
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-21.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-21.1
@@ -12816,7 +12816,7 @@ frameworks:
       disposition_links: []
   - section_code: SA-22(1)
     name: Alternative Sources for Continued Support
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-22.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-22.1
@@ -13061,7 +13061,7 @@ frameworks:
     parent: SA-4
   - section_code: SA-4(4)
     name: Assignment of Components to Systems
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-8(9).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-4.4
@@ -13188,7 +13188,7 @@ frameworks:
       disposition_links: []
   - section_code: SA-5(1)
     name: Functional Properties of Security Controls
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-4(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-5.1
@@ -13202,7 +13202,7 @@ frameworks:
     parent: SA-5
   - section_code: SA-5(2)
     name: Security-relevant External System Interfaces
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-5.2
@@ -13216,7 +13216,7 @@ frameworks:
     parent: SA-5
   - section_code: SA-5(3)
     name: High-level Design
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-5.3
@@ -13230,7 +13230,7 @@ frameworks:
     parent: SA-5
   - section_code: SA-5(4)
     name: Low-level Design
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-5.4
@@ -13244,7 +13244,7 @@ frameworks:
     parent: SA-5
   - section_code: SA-5(5)
     name: Source Code
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SA-4(2).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sa-5.5
@@ -13258,7 +13258,7 @@ frameworks:
     parent: SA-5
   - section_code: SA-6
     name: Software Usage Restrictions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-10; incorporated into SI-7.
     requirement_type: control
     format_metadata:
       oscal_id: sa-6
@@ -13273,7 +13273,7 @@ frameworks:
     status: withdrawn
   - section_code: SA-7
     name: User-installed Software
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into CM-11; incorporated into SI-7.
     requirement_type: control
     format_metadata:
       oscal_id: sa-7
@@ -14000,7 +14000,7 @@ frameworks:
     parent: SC-12
   - section_code: SC-12(4)
     name: PKI Certificates
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-12(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-12.4
@@ -14014,7 +14014,7 @@ frameworks:
     parent: SC-12
   - section_code: SC-12(5)
     name: PKI Certificates / Hardware Tokens
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-12(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-12.5
@@ -14055,7 +14055,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-13(1)
     name: FIPS-validated Cryptography
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-13.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-13.1
@@ -14069,7 +14069,7 @@ frameworks:
     parent: SC-13
   - section_code: SC-13(2)
     name: NSA-approved Cryptography
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-13.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-13.2
@@ -14083,7 +14083,7 @@ frameworks:
     parent: SC-13
   - section_code: SC-13(3)
     name: Individuals Without Formal Access Approvals
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-13.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-13.3
@@ -14097,7 +14097,7 @@ frameworks:
     parent: SC-13
   - section_code: SC-13(4)
     name: Digital Signatures
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-13.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-13.4
@@ -14111,7 +14111,9 @@ frameworks:
     parent: SC-13
   - section_code: SC-14
     name: Public Access Protections
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-2; incorporated into AC-3; incorporated
+      into AC-5; incorporated into AC-6; incorporated into SI-3; incorporated into SI-4; incorporated
+      into SI-5; incorporated into SI-7; incorporated into SI-10.
     requirement_type: control
     format_metadata:
       oscal_id: sc-14
@@ -14167,7 +14169,7 @@ frameworks:
     parent: SC-15
   - section_code: SC-15(2)
     name: Blocking Inbound and Outbound Communications Traffic
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-15.2
@@ -14409,7 +14411,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-20(1)
     name: Child Subspaces
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-20.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-20.1
@@ -14446,7 +14448,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-21(1)
     name: Data Origin and Integrity
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-21.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-21.1
@@ -14492,7 +14494,7 @@ frameworks:
     parent: SC-23
   - section_code: SC-23(2)
     name: User-initiated Logouts and Message Displays
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-12(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-23.2
@@ -14519,7 +14521,7 @@ frameworks:
     parent: SC-23
   - section_code: SC-23(4)
     name: Unique Session Identifiers with Randomization
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-23(3).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-23.4
@@ -14584,7 +14586,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-26(1)
     name: Detection of Malicious Code
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-35.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-26.1
@@ -14774,7 +14776,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-30(1)
     name: Virtualization Techniques
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-29(1).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-30.1
@@ -14920,7 +14922,7 @@ frameworks:
     parent: SC-32
   - section_code: SC-33
     name: Transmission Preparation Integrity
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-8.
     requirement_type: control
     format_metadata:
       oscal_id: sc-33
@@ -14975,7 +14977,7 @@ frameworks:
     parent: SC-34
   - section_code: SC-34(3)
     name: Hardware-based Protection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to SC-51.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-34.3
@@ -15134,7 +15136,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-4(1)
     name: Security Levels
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-4.1
@@ -15288,7 +15290,7 @@ frameworks:
     parent: SC-42
   - section_code: SC-42(3)
     name: Prohibit Use of Devices
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-42.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-42.3
@@ -15582,7 +15584,7 @@ frameworks:
       disposition_links: []
   - section_code: SC-7(1)
     name: Physically Separated Subnetworks
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-7.1
@@ -15723,7 +15725,7 @@ frameworks:
     parent: SC-7
   - section_code: SC-7(2)
     name: Public Access
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-7.2
@@ -15929,7 +15931,7 @@ frameworks:
     parent: SC-7
   - section_code: SC-7(6)
     name: Response to Recognized Failures
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-7(18).
     requirement_type: enhancement
     format_metadata:
       oscal_id: sc-7.6
@@ -16060,7 +16062,7 @@ frameworks:
     parent: SC-8
   - section_code: SC-9
     name: Transmission Confidentiality
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SC-8.
     requirement_type: control
     format_metadata:
       oscal_id: sc-9
@@ -16305,7 +16307,7 @@ frameworks:
     parent: SI-13
   - section_code: SI-13(2)
     name: Time Limit on Process Execution Without Supervision
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-7(16).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-13.2
@@ -16670,7 +16672,7 @@ frameworks:
       disposition_links: []
   - section_code: SI-2(1)
     name: Central Management
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-2.1
@@ -16861,7 +16863,7 @@ frameworks:
       disposition_links: []
   - section_code: SI-3(1)
     name: Central Management
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.1
@@ -16891,7 +16893,7 @@ frameworks:
     parent: SI-3
   - section_code: SI-3(2)
     name: Automatic Updates
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-3.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.2
@@ -16905,7 +16907,7 @@ frameworks:
     parent: SI-3
   - section_code: SI-3(3)
     name: Non-privileged Users
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-6(10).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.3
@@ -16930,7 +16932,7 @@ frameworks:
     parent: SI-3
   - section_code: SI-3(5)
     name: Portable Storage Devices
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into MP-7.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.5
@@ -16959,7 +16961,7 @@ frameworks:
     parent: SI-3
   - section_code: SI-3(7)
     name: Nonsignature-based Detection
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-3.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.7
@@ -16991,7 +16993,7 @@ frameworks:
     parent: SI-3
   - section_code: SI-3(9)
     name: Authenticate Remote Commands
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to AC-17(10).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-3.9
@@ -17333,7 +17335,7 @@ frameworks:
     parent: SI-4
   - section_code: SI-4(6)
     name: Restrict Non-privileged Users
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-6(10).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-4.6
@@ -17362,7 +17364,7 @@ frameworks:
     parent: SI-4
   - section_code: SI-4(8)
     name: Protection of Monitoring Information
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-4.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-4.8
@@ -17450,7 +17452,7 @@ frameworks:
       disposition_links: []
   - section_code: SI-6(1)
     name: Notification of Failed Security Tests
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SI-6.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-6.1
@@ -17553,7 +17555,7 @@ frameworks:
     parent: SI-7
   - section_code: SI-7(11)
     name: Confined Environments with Limited Privileges
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to CM-7(6).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-7.11
@@ -17580,7 +17582,7 @@ frameworks:
     parent: SI-7
   - section_code: SI-7(13)
     name: Code Execution in Protected Environments
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to CM-7(7).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-7.13
@@ -17594,7 +17596,7 @@ frameworks:
     parent: SI-7
   - section_code: SI-7(14)
     name: Binary or Machine Executable Code
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; moved to CM-7(8).
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-7.14
@@ -17670,7 +17672,7 @@ frameworks:
     parent: SI-7
   - section_code: SI-7(4)
     name: Tamper-evident Packaging
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into SR-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-7.4
@@ -17764,7 +17766,7 @@ frameworks:
       disposition_links: []
   - section_code: SI-8(1)
     name: Central Management
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into PL-9.
     requirement_type: enhancement
     format_metadata:
       oscal_id: si-8.1
@@ -17802,7 +17804,8 @@ frameworks:
     parent: SI-8
   - section_code: SI-9
     name: Information Input Restrictions
-    description: ''
+    description: Withdrawn in NIST SP 800-53 Rev. 5; incorporated into AC-2; incorporated into AC-3; incorporated
+      into AC-5; incorporated into AC-6.
     requirement_type: control
     format_metadata:
       oscal_id: si-9
