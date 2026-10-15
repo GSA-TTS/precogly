@@ -59,7 +59,9 @@ class KeycloakBearerAuthentication(authentication.BaseAuthentication):
         if jwt is None or PyJWKClient is None:
             return None
 
-        header = authentication.get_authorization_header(request).decode("utf-8", "replace")
+        header = authentication.get_authorization_header(request).decode(
+            "utf-8", "replace"
+        )
         if not header.lower().startswith(self.keyword.lower() + " "):
             return None
         token = header.split(" ", 1)[1].strip()
@@ -89,7 +91,9 @@ class KeycloakBearerAuthentication(authentication.BaseAuthentication):
             # Return None so DRF continues to the next authenticator.
             return None
 
-        username = (claims.get("preferred_username") or claims.get("email") or "").lower()
+        username = (
+            claims.get("preferred_username") or claims.get("email") or ""
+        ).lower()
         if not username:
             raise exceptions.AuthenticationFailed("Token missing username claim")
 
