@@ -66,6 +66,11 @@ prod = [
     "django-celery-beat>=2.6,<3.0",
     "sentry-sdk>=2.0,<3.0",
     "django-csp>=3.8,<4.0",
+    # Static file serving in production
+    "whitenoise>=6.6,<7.0",
+    # Keycloak / OIDC (cloud.gov SSO)
+    "mozilla-django-oidc>=4.0,<5.0",
+    "PyJWT[crypto]>=2.8,<3.0",
 ]
 
 [tool.uv]

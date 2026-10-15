@@ -4,7 +4,8 @@
  * Handles JWT token management and provides typed fetch wrapper.
  */
 
-export const API_BASE = '/api'
+// Absolute in production (cross-origin API), relative in dev (Vite proxy).
+export const API_BASE = `${(import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')}/api`
 
 // Token storage keys
 const TOKEN_KEY = 'precogly_access_token'

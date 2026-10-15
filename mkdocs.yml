@@ -40,6 +40,7 @@ nav:
       - Quickstart: getting-started/quickstart.md
       - Configuration: getting-started/configuration.md
       - Local Podman (rootless): getting-started/local-podman.md
+      - Cloud.gov SSO (Keycloak): getting-started/cloud-gov-sso.md
   - Concepts:
       - Library Packs: concepts/library-packs.md
       - DFD Editor: concepts/dfd-editor.md

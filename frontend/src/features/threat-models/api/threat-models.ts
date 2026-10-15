@@ -33,7 +33,7 @@ import type {
   RelatedModel,
 } from '@/features/threat-models/types/core'
 import type { RelationType } from '@/types/domain'
-import { api, getAccessToken } from '@/lib/api'
+import { api, API_BASE, getAccessToken } from '@/lib/api'
 import { deleteWithWarnings } from './delete-warnings'
 
 // Query keys
@@ -776,7 +776,7 @@ export function useImportCycloneDx() {
  */
 export async function exportCycloneDx(threatModelId: string): Promise<string[]> {
   const token = getAccessToken()
-  const response = await fetch(`/api/threat-models/${threatModelId}/export/cyclonedx/`, {
+  const response = await fetch(`${API_BASE}/threat-models/${threatModelId}/export/cyclonedx/`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 

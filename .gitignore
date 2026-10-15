@@ -45,3 +45,18 @@ frontend/src/features/ai/components/OwlMark_proposed.tsx
 
 # Claude Code MCP server config (local, points at a dev backend)
 .mcp.json
+
+# Local-only secrets (cloud.gov OIDC creds, Keycloak admin, etc.)
+*.local
+.manifest-*.rendered.yml
+
+# Local dev SQLite databases
+*.sqlite3
+
+# Vendored / experimental scratch (kept local only)
+archive/
+vendor/pic-blm-cxworks/
+
+# Local editor/pack scratch
+PACK_DEPLOYMENT.md
+.paketo.toml

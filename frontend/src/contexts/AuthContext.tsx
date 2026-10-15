@@ -7,6 +7,7 @@ import {
   getCurrentUser,
   isAuthenticated,
   clearTokens,
+  ApiError,
   type LoginCredentials,
   type RegisterInput,
 } from '@/lib/api'
@@ -43,9 +44,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const currentUser = await getCurrentUser()
           setUser(currentUser)
-        } catch {
-          // Token expired or invalid
-          clearTokens()
+        } catch (err) {
+          // Only drop tokens on definitive 401s; keep them on transient
+          // network errors so a page reload can succeed later.
+          if (err instanceof ApiError && err.status === 401) {
+            clearTokens()
+          }
         }
       }
       setIsLoading(false)
