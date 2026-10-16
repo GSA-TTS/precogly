@@ -35,6 +35,7 @@ import { useCountermeasures, useDeleteComponent, useThreatModelThreats } from '@
 import { isActiveThreat, type TriageStatus } from '@/types/triage'
 import type { AnalysisCountermeasure, AnalysisThreat, CountermeasureStatus } from '../../types/threat-analysis'
 import { AnalysisTreeItem } from './ComponentTreeItem'
+import { EditComponentDialog } from './EditComponentDialog'
 import { ThreatList } from './ThreatList'
 import { CountermeasureColumn } from './CountermeasureColumn'
 import { type Assignee } from './CountermeasureCard'
@@ -120,10 +121,12 @@ export function ComponentView({
 }: ComponentViewProps) {
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set())
   const [deleteComponentConfirmFor, setDeleteComponentConfirmFor] = useState<{ id: number; name: string } | null>(null)
+  const [editingComponentId, setEditingComponentId] = useState<number | null>(null)
 
   // The model's rows, canvas or not.
   const { data: threatModel } = useThreatModel(threatModelId)
   const { data: components = [], isSuccess: componentsLoaded } = useAnalysisComponents(threatModelId)
+  const componentToEdit = useMemo(() => components.find((c) => c.id === editingComponentId) ?? null, [components, editingComponentId])
   const { data: zones = [], isSuccess: zonesLoaded } = useZones({ threatModel: threatModelId })
   const { data: flows = [], isSuccess: flowsLoaded } = useFlows({ threatModel: threatModelId })
   const { data: boundaries = [], isSuccess: boundariesLoaded } = useBoundaries({ threatModel: threatModelId })
@@ -297,6 +300,7 @@ export function ComponentView({
                   onSelect={onSelectTarget}
                   onToggleCollapsed={toggleCollapsed}
                   onRequestDeleteComponent={setDeleteComponentConfirmFor}
+                  onRequestEditComponent={setEditingComponentId}
                 />
               </div>
             </ScrollArea>
@@ -391,6 +395,14 @@ export function ComponentView({
           isSecurityTeam={isSecurityTeam}
         />
       </ResizablePanelGroup>
+
+      <EditComponentDialog
+        open={editingComponentId !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingComponentId(null)
+        }}
+        component={componentToEdit}
+      />
 
       <AlertDialog
         open={!!deleteComponentConfirmFor}

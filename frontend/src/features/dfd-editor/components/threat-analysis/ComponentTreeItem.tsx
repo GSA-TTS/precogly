@@ -17,6 +17,7 @@ import {
   SquareDashed,
   Trash2,
   User,
+  Pencil,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -66,6 +67,7 @@ interface AnalysisTreeItemProps {
   onSelect: (selection: AnalysisSelection) => void
   onToggleCollapsed: (key: string) => void
   onRequestDeleteComponent: (component: { id: number; name: string }) => void
+  onRequestEditComponent?: (componentId: number) => void
 }
 
 export function AnalysisTreeItem({
@@ -75,6 +77,7 @@ export function AnalysisTreeItem({
   onSelect,
   onToggleCollapsed,
   onRequestDeleteComponent,
+  onRequestEditComponent,
 }: AnalysisTreeItemProps) {
   const isGroup = node.selection === null
   const isSelected = !isGroup && isSameSelection(node.selection, selection)
@@ -146,6 +149,21 @@ export function AnalysisTreeItem({
             </div>
           </div>
           <div className="ml-1 flex shrink-0 items-center gap-1">
+            {node.kind === 'component' && node.backendId !== undefined && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 touch:opacity-100"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onRequestEditComponent?.(node.backendId!)
+                }}
+                aria-label={`Edit ${node.label}`}
+                title="Edit component"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {node.kind === 'component' && node.backendId !== undefined && node.isAnalysisOnly && (
               <Button
                 variant="ghost"
@@ -211,6 +229,7 @@ export function AnalysisTreeItem({
             onSelect={onSelect}
             onToggleCollapsed={onToggleCollapsed}
             onRequestDeleteComponent={onRequestDeleteComponent}
+            onRequestEditComponent={onRequestEditComponent}
           />
         ))}
     </>
