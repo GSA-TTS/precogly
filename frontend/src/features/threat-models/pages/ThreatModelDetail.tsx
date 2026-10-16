@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Link, Navigate, useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, Loader2, LayoutDashboard, Shield, Trash2, BarChart3, FileText, Share2, Download, Pencil, Crosshair, MoreHorizontal } from 'lucide-react'
+import { ChevronLeft, Loader2, LayoutDashboard, Shield, Trash2, BarChart3, FileText, Share2, Download, Pencil, Crosshair } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -39,7 +39,6 @@ import { OverdueCountermeasuresButton } from '@/features/dfd-editor/components/t
 import { AddThreatDialog } from '@/features/dfd-editor/components/threat-analysis/AddThreatDialog'
 import { AddCountermeasureDialog } from '@/features/dfd-editor/components/threat-analysis/AddCountermeasureDialog'
 import { AddCustomComponentDialog } from '@/features/dfd-editor/components/threat-analysis/AddCustomComponentDialog'
-import { ManagePersonasDialog } from '@/features/dfd-editor/components/threat-analysis/ManagePersonasDialog'
 import { useThreatModelThreats, type TargetRef } from '@/features/threat-models/api/threats'
 import { useAnalysisComponents } from '@/features/threat-models/api/components'
 import {
@@ -137,7 +136,6 @@ export function ThreatModelDetail() {
     },
     [navigate, id, location.search]
   )
-  const [managePersonasOpen, setManagePersonasOpen] = useState(false)
   const [selectedDiagramId, setSelectedDiagramId] = useState<string | null>(null)
   // The selection is a target reference or the whole system, not a canvas id.
   const [selectedTarget, setSelectedTarget] = useState<AnalysisSelection | null>(null)
@@ -647,28 +645,6 @@ export function ThreatModelDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Model menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs gap-1"
-                  aria-label="Model menu"
-                >
-                  <MoreHorizontal className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setManagePersonasOpen(true)}
-                  className="text-xs"
-                >
-                  Manage threat actors
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {/* Delete button */}
             <Button
               variant="outline"
@@ -1087,11 +1063,6 @@ export function ThreatModelDetail() {
         threatModelName={threatModel.name}
         open={shareLinkDialogOpen}
         onOpenChange={setShareLinkDialogOpen}
-      />
-      <ManagePersonasDialog
-        open={managePersonasOpen}
-        onOpenChange={setManagePersonasOpen}
-        threatModelId={id!}
       />
 
       {/* Add Threat Dialog */}
