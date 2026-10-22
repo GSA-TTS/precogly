@@ -137,6 +137,16 @@ class AIProviderConfigAPITests(APITestCase):
             1,
         )
 
+    def test_duplicate_name_in_same_organization_is_rejected(self):
+        AIProviderConfig.objects.create(organization=self.org, name="duplicate")
+
+        response = self.client.post(
+            "/api/ai-providers/", self._payload(name="duplicate"), format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("non_field_errors", response.data)
+
     def test_list_is_scoped_to_member_orgs(self):
         AIProviderConfig.objects.create(organization=self.org, name="mine")
         AIProviderConfig.objects.create(organization=self.other_org, name="theirs")
