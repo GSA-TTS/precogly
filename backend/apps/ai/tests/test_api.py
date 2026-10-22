@@ -42,9 +42,7 @@ class AIProviderConfigAPITests(APITestCase):
         cls.outsider = User.objects.create_user(
             username="outsider", email="out@globex.test", password="pw"
         )
-        OrganizationMember.objects.create(
-            organization=cls.other_org, user=cls.outsider
-        )
+        OrganizationMember.objects.create(organization=cls.other_org, user=cls.outsider)
 
     def setUp(self):
         self.client.force_authenticate(self.member)
@@ -76,7 +74,9 @@ class AIProviderConfigAPITests(APITestCase):
         self.assertEqual(config.api_key, "sk-secret")
 
     def test_create_without_key_reports_no_key(self):
-        response = self.client.post("/api/ai-providers/", self._payload(), format="json")
+        response = self.client.post(
+            "/api/ai-providers/", self._payload(), format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertFalse(response.data["has_api_key"])
 
@@ -127,7 +127,9 @@ class AIProviderConfigAPITests(APITestCase):
             organization=self.org, name="incumbent", is_default=True
         )
         response = self.client.post(
-            "/api/ai-providers/", self._payload(name="challenger", isDefault=True), format="json"
+            "/api/ai-providers/",
+            self._payload(name="challenger", isDefault=True),
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(
@@ -153,7 +155,7 @@ class AIProviderConfigAPITests(APITestCase):
 
         response = self.client.get("/api/ai-providers/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data["results"] if "results" in response.data else response.data
+        results = response.data.get("results", response.data)
         names = {row["name"] for row in results}
         self.assertEqual(names, {"mine"})
 
@@ -176,7 +178,9 @@ class AIProviderConfigAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("api_key", response.data)
         # Nothing is persisted when the key could not be stored.
-        self.assertFalse(AIProviderConfig.objects.filter(name="Local LM Studio").exists())
+        self.assertFalse(
+            AIProviderConfig.objects.filter(name="Local LM Studio").exists()
+        )
 
     @mock.patch("apps.ai.views.build_provider")
     def test_connection_action_reports_health(self, build_provider):
