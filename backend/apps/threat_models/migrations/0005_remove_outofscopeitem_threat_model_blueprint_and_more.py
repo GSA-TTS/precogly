@@ -5,6 +5,33 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def create_legacy_blueprints(apps, schema_editor):
+    """Create the first blueprint for every pre-blueprint threat model.
+
+    The follow-on DFD migration moves legacy DFD rows to these blueprints, so
+    this data step must run before either application enforces its new foreign
+    key.  Do not use a hard-coded primary key: upgraded databases can have any
+    sequence state.
+    """
+    ThreatModel = apps.get_model("threat_models", "ThreatModel")
+    Blueprint = apps.get_model("threat_models", "Blueprint")
+    OutOfScopeItem = apps.get_model("threat_models", "OutOfScopeItem")
+
+    blueprints_by_model = {}
+    for threat_model in ThreatModel.objects.all().iterator():
+        blueprint = Blueprint.objects.create(
+            threat_model_id=threat_model.pk,
+            name=threat_model.name,
+            display_order=0,
+        )
+        blueprints_by_model[threat_model.pk] = blueprint.pk
+
+    for threat_model_id, blueprint_id in blueprints_by_model.items():
+        OutOfScopeItem.objects.filter(threat_model_id=threat_model_id).update(
+            blueprint_id=blueprint_id
+        )
+
+
 class Migration(migrations.Migration):
 
     # Runs after every migration that predates it in the other apps: their data
@@ -22,10 +49,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='outofscopeitem',
-            name='threat_model',
-        ),
         migrations.CreateModel(
             name='Blueprint',
             fields=[
@@ -47,7 +70,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='outofscopeitem',
             name='blueprint',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='out_of_scope_items', to='threat_models.blueprint'),
-            preserve_default=False,
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='out_of_scope_items', to='threat_models.blueprint'),
+        ),
+        migrations.RunPython(
+            create_legacy_blueprints,
+            migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
+            model_name='outofscopeitem',
+            name='blueprint',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='out_of_scope_items', to='threat_models.blueprint'),
+        ),
+        migrations.RemoveField(
+            model_name='outofscopeitem',
+            name='threat_model',
         ),
     ]

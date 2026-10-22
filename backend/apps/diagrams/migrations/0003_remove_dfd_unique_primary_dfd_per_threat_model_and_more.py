@@ -5,6 +5,30 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def backfill_dfd_blueprints(apps, schema_editor):
+    """Attach every legacy DFD to its threat model's migration-created view."""
+    Blueprint = apps.get_model("threat_models", "Blueprint")
+    DFD = apps.get_model("diagrams", "DFD")
+
+    unassigned_dfd_ids = list(
+        DFD.objects.filter(threat_model_id__isnull=True).values_list("pk", flat=True)
+    )
+    if unassigned_dfd_ids:
+        raise RuntimeError(
+            "Cannot migrate DFDs without a threat model to a required blueprint; "
+            f"assign or remove legacy DFD IDs: {unassigned_dfd_ids}"
+        )
+
+    blueprints_by_model = {
+        blueprint.threat_model_id: blueprint.pk
+        for blueprint in Blueprint.objects.order_by("threat_model_id", "id")
+    }
+    for threat_model_id, blueprint_id in blueprints_by_model.items():
+        DFD.objects.filter(threat_model_id=threat_model_id).update(
+            blueprint_id=blueprint_id
+        )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -18,15 +42,23 @@ class Migration(migrations.Migration):
             model_name='dfd',
             name='unique_primary_dfd_per_threat_model',
         ),
-        migrations.RemoveField(
-            model_name='dfd',
-            name='threat_model',
-        ),
         migrations.AddField(
             model_name='dfd',
             name='blueprint',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='dfds', to='threat_models.blueprint'),
-            preserve_default=False,
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='dfds', to='threat_models.blueprint'),
+        ),
+        migrations.RunPython(
+            backfill_dfd_blueprints,
+            migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
+            model_name='dfd',
+            name='blueprint',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dfds', to='threat_models.blueprint'),
+        ),
+        migrations.RemoveField(
+            model_name='dfd',
+            name='threat_model',
         ),
         migrations.AlterField(
             model_name='dfd',
