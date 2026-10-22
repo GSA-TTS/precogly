@@ -1254,9 +1254,7 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
                 }
             ],
             "threats": {
-                "threats": [
-                    {"bom-ref": "threat-repeat", "name": "Repeated Threat"}
-                ],
+                "threats": [{"bom-ref": "threat-repeat", "name": "Repeated Threat"}],
                 "scenarios": [
                     {
                         "bom-ref": "scenario-repeat-one",
@@ -1279,5 +1277,8 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
             1,
         )
         self.assertTrue(
-            any("Duplicate scenario link skipped" in warning for warning in summary["warnings"])
+            any(
+                "Duplicate scenario link skipped" in warning
+                for warning in summary["warnings"]
+            )
         )
