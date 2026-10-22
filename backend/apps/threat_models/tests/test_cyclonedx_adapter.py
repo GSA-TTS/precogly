@@ -471,6 +471,50 @@ class TestCycloneDxExport(CycloneDxTestMixin, TestCase):
         self.assertIn("scenarios", threats)
         self.assertGreaterEqual(len(threats["threats"]), 1)
         self.assertGreaterEqual(len(threats["scenarios"]), 1)
+        for scenario in threats["scenarios"]:
+            self.assertIn("threats", scenario)
+            self.assertNotIn("threat", scenario)
+            self.assertEqual(len(scenario["threats"]), 1)
+
+    def test_legacy_scenario_threat_relation_exports_as_plural_only(self):
+        """A legacy source relation must not survive beside canonical output."""
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [
+                {
+                    "name": "Test",
+                    "assets": [
+                        {
+                            "bom-ref": "asset-legacy-relation",
+                            "name": "Legacy Relation Component",
+                            "type": "component",
+                        }
+                    ],
+                }
+            ],
+            "threats": {
+                "threats": [
+                    {
+                        "bom-ref": "threat-legacy-relation",
+                        "name": "Legacy Relation Threat",
+                    }
+                ],
+                "scenarios": [
+                    {
+                        "bom-ref": "scenario-legacy-relation",
+                        "threat": "threat-legacy-relation",
+                        "affectedAssets": ["asset-legacy-relation"],
+                    }
+                ],
+            },
+        }
+
+        threat_model, _ = self.adapter.import_data(json_data, self.org, self.user)
+        scenario = self.adapter.export_data(threat_model)["threats"]["scenarios"][0]
+
+        self.assertEqual(scenario["threats"], ["threat-legacy-relation"])
+        self.assertNotIn("threat", scenario)
 
     def test_risks_block_exported(self):
         risks = self.export.get("risks", {})
@@ -1113,3 +1157,127 @@ class TestCycloneDxEnumMappings(CycloneDxTestMixin, TestCase):
         dup_warnings = [w for w in warnings if "Duplicate threat-asset link" in w]
         self.assertEqual(len(dup_warnings), 1)
         self.assertIn("Shared Component", dup_warnings[0])
+
+    def test_plural_scenario_threat_reference_links_existing_threat(self):
+        """Topology-projected scenarios use ``threats``, not legacy ``threat``."""
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [
+                {
+                    "name": "Test",
+                    "assets": [
+                        {
+                            "bom-ref": "asset-projected",
+                            "name": "Projected Component",
+                            "type": "component",
+                        }
+                    ],
+                }
+            ],
+            "threats": {
+                "threats": [
+                    {
+                        "bom-ref": "threat-projected",
+                        "name": "Projected Threat",
+                        "affectedAssets": ["asset-projected"],
+                    }
+                ],
+                "scenarios": [
+                    {
+                        "bom-ref": "scenario-projected",
+                        "threats": ["threat-projected"],
+                        "affectedAssets": ["asset-projected"],
+                    }
+                ],
+            },
+        }
+
+        tm, summary = self.adapter.import_data(json_data, self.org, self.user)
+
+        self.assertEqual(summary["threats"], 1)
+        self.assertEqual(summary["scenarios"], 1)
+        instances = ComponentInstanceThreat.objects.filter(component__threat_model=tm)
+        self.assertEqual(instances.count(), 1)
+        self.assertEqual(instances.get().threat_library.name, "Projected Threat")
+
+    def test_unresolved_scenario_threat_reference_creates_no_orphan(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [
+                {
+                    "name": "Test",
+                    "assets": [
+                        {
+                            "bom-ref": "asset-unresolved",
+                            "name": "Unresolved Component",
+                            "type": "component",
+                        }
+                    ],
+                }
+            ],
+            "threats": {
+                "scenarios": [
+                    {
+                        "bom-ref": "scenario-unresolved",
+                        "threats": ["threat-not-defined"],
+                        "affectedAssets": ["asset-unresolved"],
+                    }
+                ]
+            },
+        }
+
+        tm, summary = self.adapter.import_data(json_data, self.org, self.user)
+
+        self.assertFalse(
+            ComponentInstanceThreat.objects.filter(component__threat_model=tm).exists()
+        )
+        self.assertTrue(
+            any("could not be resolved" in warning for warning in summary["warnings"])
+        )
+
+    def test_repeated_scenario_pair_does_not_duplicate_instance_threat(self):
+        json_data = {
+            "specFormat": "CycloneDX",
+            "specVersion": "2.0",
+            "blueprints": [
+                {
+                    "name": "Test",
+                    "assets": [
+                        {
+                            "bom-ref": "asset-repeat",
+                            "name": "Repeated Component",
+                            "type": "component",
+                        }
+                    ],
+                }
+            ],
+            "threats": {
+                "threats": [
+                    {"bom-ref": "threat-repeat", "name": "Repeated Threat"}
+                ],
+                "scenarios": [
+                    {
+                        "bom-ref": "scenario-repeat-one",
+                        "threats": ["threat-repeat"],
+                        "affectedAssets": ["asset-repeat"],
+                    },
+                    {
+                        "bom-ref": "scenario-repeat-two",
+                        "threats": ["threat-repeat"],
+                        "affectedAssets": ["asset-repeat"],
+                    },
+                ],
+            },
+        }
+
+        tm, summary = self.adapter.import_data(json_data, self.org, self.user)
+
+        self.assertEqual(
+            ComponentInstanceThreat.objects.filter(component__threat_model=tm).count(),
+            1,
+        )
+        self.assertTrue(
+            any("Duplicate scenario link skipped" in warning for warning in summary["warnings"])
+        )
