@@ -732,11 +732,17 @@ class CycloneDxAdapter(BaseAdapter):
             # Scenarios
             for inst_type, inst in instances:
                 original_scenario = self._original_data(inst, "original_scenario")
+                # Scenario-to-threat relations are represented by the live
+                # instance relationship. Do not retain legacy singular or
+                # imported plural forms from passthrough metadata, otherwise
+                # export can emit both ``threat`` and ``threats``.
+                original_scenario.pop("threat", None)
+                original_scenario.pop("threats", None)
                 scenario = {
                     "bom-ref": self._register_ref(
                         resolver, "scenario", inst, original_scenario
                     ),
-                    "threat": abstract_ref,
+                    "threats": [abstract_ref],
                 }
 
                 if inst_type == "component":
@@ -1211,9 +1217,9 @@ class CycloneDxAdapter(BaseAdapter):
         # 11. Threats -> ThreatLibrary
         threats_block = json_data.get("threats", {})
         scenario_threat_refs = {
-            s.get("threat")
-            for s in threats_block.get("scenarios", [])
-            if s.get("threat")
+            threat_ref
+            for scenario_data in threats_block.get("scenarios", [])
+            for threat_ref in self._scenario_threat_refs(scenario_data)
         }
         for threat_data in threats_block.get("threats", []):
             self._import_threat(
@@ -1831,6 +1837,24 @@ class CycloneDxAdapter(BaseAdapter):
                 taxonomy_entry=entry,
             )
 
+    @staticmethod
+    def _scenario_threat_refs(scenario_data):
+        """Return normalized scenario threat references from supported TM-BOM forms.
+
+        Early adapter payloads used the singular ``threat`` relation. The
+        topology projection emits the CycloneDX-compatible ``threats`` array.
+        Accept both forms so a projected document does not silently create
+        orphan scenario instances or duplicate abstract-threat instances.
+        """
+        refs = []
+        singular_ref = scenario_data.get("threat")
+        if singular_ref:
+            refs.append(singular_ref)
+        for threat_ref in scenario_data.get("threats", []) or []:
+            if threat_ref and threat_ref not in refs:
+                refs.append(threat_ref)
+        return refs
+
     def _create_instance_threat_from_abstract(
         self,
         threat_lib,
@@ -1903,8 +1927,26 @@ class CycloneDxAdapter(BaseAdapter):
         )
 
         bom_ref = scenario_data.get("bom-ref", "")
-        threat_ref = scenario_data.get("threat")
+        threat_refs = self._scenario_threat_refs(scenario_data)
+        threat_ref = threat_refs[0] if threat_refs else None
         threat_lib = resolver.resolve("threat", threat_ref) if threat_ref else None
+        if not threat_lib:
+            relation = f"'{threat_ref}'" if threat_ref else "no threat reference"
+            msg = (
+                f"Scenario '{bom_ref}' references {relation}, which could not be "
+                "resolved; its affected-asset links were skipped."
+            )
+            logger.warning(msg)
+            warnings.append(msg)
+            return
+        if len(threat_refs) > 1:
+            msg = (
+                f"Scenario '{bom_ref}' references multiple threats; only "
+                f"'{threat_ref}' was imported because instance threats support "
+                "one threat library entry."
+            )
+            logger.warning(msg)
+            warnings.append(msg)
 
         severity = "medium"
         risk_score = scenario_data.get("riskScore", {})
@@ -1972,16 +2014,32 @@ class CycloneDxAdapter(BaseAdapter):
                 instance_kwargs["decision_rationale"] = decision_rationale
 
             if isinstance(target, OrgsystemComponent):
-                instance = ComponentInstanceThreat.objects.create(
+                instance, created = ComponentInstanceThreat.objects.get_or_create(
                     component=target,
-                    **instance_kwargs,
+                    threat_library=threat_lib,
+                    defaults=instance_kwargs,
                 )
+                if not created:
+                    msg = (
+                        f"Duplicate scenario link skipped: scenario '{bom_ref}' x "
+                        f"threat '{threat_lib.name}' x asset '{target.name}'."
+                    )
+                    logger.warning(msg)
+                    warnings.append(msg)
                 resolver.register("scenario", bom_ref, instance)
             elif isinstance(target, DataFlow):
-                instance = DataFlowInstanceThreat.objects.create(
+                instance, created = DataFlowInstanceThreat.objects.get_or_create(
                     data_flow=target,
-                    **instance_kwargs,
+                    threat_library=threat_lib,
+                    defaults=instance_kwargs,
                 )
+                if not created:
+                    msg = (
+                        f"Duplicate scenario link skipped: scenario '{bom_ref}' x "
+                        f"threat '{threat_lib.name}' x asset '{target.name}'."
+                    )
+                    logger.warning(msg)
+                    warnings.append(msg)
                 resolver.register("scenario", bom_ref, instance)
 
     def _import_risk(self, risk_data, threat_model, resolver):
