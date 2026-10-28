@@ -7,6 +7,7 @@ import {
   getCurrentUser,
   isAuthenticated,
   clearTokens,
+  ApiError,
   type LoginCredentials,
   type RegisterInput,
 } from '@/lib/api'
@@ -28,9 +29,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const currentUser = await getCurrentUser()
           setUser(currentUser)
-        } catch {
-          // Token expired or invalid
-          clearTokens()
+        } catch (err) {
+          // Preserve the fork's SSO tokens on transient network errors.
+          if (err instanceof ApiError && err.status === 401) {
+            clearTokens()
+          }
         }
       }
       setIsLoading(false)
