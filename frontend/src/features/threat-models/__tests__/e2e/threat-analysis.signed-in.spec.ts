@@ -293,7 +293,7 @@ test.describe('threat analysis screen', () => {
     await page.keyboard.press('Escape')
 
     await dialog.getByRole('button', { name: 'Manage threat actors' }).click()
-    const manage = page.getByRole('dialog', { name: 'Threat actors' })
+    const manage = page.getByRole('dialog', { name: 'Manage threat actors' })
     await expect(manage.getByText('Insider Threat', { exact: true })).toBeVisible()
     await manage.getByRole('button', { name: 'Close' }).first().click()
 
