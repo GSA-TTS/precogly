@@ -75,6 +75,7 @@ nav:
       - Overview: contributing/index.md
       - Development Setup: contributing/development-setup.md
       - Creating Library Packs: contributing/creating-library-packs.md
+      - Fork Feature Inventory (2026-10-29): contributing/fork-feature-inventory-2026-10-29.md
 
 markdown_extensions:
   - admonition
