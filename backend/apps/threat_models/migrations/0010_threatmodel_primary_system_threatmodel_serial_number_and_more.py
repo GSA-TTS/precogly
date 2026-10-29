@@ -5,6 +5,20 @@ import uuid
 from django.db import migrations, models
 
 
+def assign_serial_numbers(apps, schema_editor):
+    """Give every pre-existing threat model its own serial number.
+
+    Django evaluates a callable field default once per AddField and writes that
+    single value to every existing row, so adding a unique UUID column directly
+    fails on any database holding more than one threat model.  The column is
+    therefore added nullable, filled in per row here, and only then made
+    unique and non-null.
+    """
+    ThreatModel = apps.get_model("threat_models", "ThreatModel")
+    for pk in ThreatModel.objects.values_list("pk", flat=True).iterator():
+        ThreatModel.objects.filter(pk=pk).update(serial_number=uuid.uuid4())
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -19,6 +33,15 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.RESTRICT, related_name='primary_threat_models', to='systems.orgsystem'),
         ),
         migrations.AddField(
+            model_name='threatmodel',
+            name='serial_number',
+            field=models.UUIDField(default=uuid.uuid4, editable=False, null=True),
+        ),
+        migrations.RunPython(
+            assign_serial_numbers,
+            migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
             model_name='threatmodel',
             name='serial_number',
             field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
