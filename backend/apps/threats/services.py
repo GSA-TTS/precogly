@@ -13,7 +13,7 @@ boundary row; a scenario has one or many targets, or none when it is a
 whole-system threat.
 """
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q
 
@@ -25,6 +25,7 @@ from apps.threat_models.numbering import COUNTERMEASURES, THREATS, allocate_numb
 from .models import (
     ACTIVE_TRIAGE_STATUSES,
     ComponentLibraryThreat,
+    CountermeasureComment,
     CountermeasureLibrary,
     CountermeasureThreatLink,
     InstanceCountermeasure,
@@ -795,6 +796,138 @@ def remove_threats_that_stopped_applying(target) -> int:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Lifecycle transitions
+# ---------------------------------------------------------------------------
+
+NON_CREDIT_STATUSES = {"gap", "waived", "decommissioned"}
+REVIEWED_STATUSES = {"verified", "platform", "waived"}
+ALLOWED_STATUS_TRANSITIONS = {
+    "gap": {"planned", "waived", "platform", "decommissioned"},
+    "planned": {"gap", "in_progress", "implemented", "waived", "decommissioned"},
+    "in_progress": {"gap", "planned", "implemented", "waived", "decommissioned"},
+    "implemented": {"in_progress", "verified", "waived", "platform", "decommissioned"},
+    "verified": {"implemented", "waived", "platform", "decommissioned"},
+    "waived": {"gap", "planned", "decommissioned"},
+    "platform": {"implemented", "verified", "decommissioned"},
+    "decommissioned": {"gap", "planned"},
+}
+
+
+def _is_security_reviewer(user, countermeasure):
+    return user.organization_memberships.filter(
+        organization=countermeasure.threat_model.organization,
+        role="security_team",
+    ).exists()
+
+
+@transaction.atomic
+def transition_countermeasure(
+    countermeasure,
+    target_status,
+    actor,
+    *,
+    owner=None,
+    evidence_url=None,
+    note="",
+):
+    """Apply one validated lifecycle transition and write its history entry.
+
+    Assigning or removing ``platform`` also goes through
+    ``check_platform_status`` (H6), so leaving platform is Security Team only
+    here as it is on every other write path.
+    """
+    current_status = countermeasure.status
+    valid_statuses = set(InstanceCountermeasure.Status.values)
+    if target_status not in valid_statuses:
+        raise ValidationError({"status": "Unknown countermeasure status."})
+    if target_status == current_status:
+        raise ValidationError({"status": "Countermeasure is already in this status."})
+    if target_status not in ALLOWED_STATUS_TRANSITIONS[current_status]:
+        raise ValidationError(
+            {
+                "status": f"Transition from {current_status} to {target_status} is not allowed."
+            }
+        )
+
+    if owner is not None:
+        if not owner.organization_memberships.filter(
+            organization=countermeasure.threat_model.organization
+        ).exists():
+            raise ValidationError(
+                {"assigned_owner": "Owner must belong to this organization."}
+            )
+        countermeasure.assigned_owner = owner
+
+    if evidence_url is not None:
+        countermeasure.evidence_url = evidence_url
+
+    if (
+        target_status in {"planned", "in_progress"}
+        and not countermeasure.assigned_owner
+    ):
+        raise ValidationError(
+            {"assigned_owner": "An owner is required for this status."}
+        )
+
+    if (
+        target_status in {"implemented", "verified"}
+        and not (countermeasure.countermeasure_description or "").strip()
+    ):
+        raise ValidationError(
+            {"countermeasure_description": "Implementation prose is required."}
+        )
+
+    check_platform_status(
+        actor, countermeasure.threat_model, current_status, target_status
+    )
+
+    if target_status in REVIEWED_STATUSES and not _is_security_reviewer(
+        actor, countermeasure
+    ):
+        raise ValidationError(
+            {
+                "status": "A Security Team member in this organization must approve this status."
+            }
+        )
+
+    if target_status == "waived" and not note.strip():
+        raise ValidationError({"note": "A waiver rationale is required."})
+
+    if target_status == "verified":
+        passing_test = countermeasure.tests.filter(
+            verification_test__passed=True,
+            verification_test__evidence__gt="",
+        ).exists()
+        if not countermeasure.evidence_url and not passing_test:
+            raise ValidationError(
+                {
+                    "evidence": "Verification requires an evidence URL or a passing test with evidence."
+                }
+            )
+
+    update_fields = ["status", "verified_by", "updated_at"]
+    if owner is not None:
+        update_fields.append("assigned_owner")
+    if evidence_url is not None:
+        update_fields.append("evidence_url")
+    if target_status == "waived":
+        countermeasure.waiver_reason = note.strip()
+        update_fields.append("waiver_reason")
+    countermeasure.status = target_status
+    countermeasure.verified_by = actor if target_status == "verified" else None
+    countermeasure.save(update_fields=update_fields)
+
+    CountermeasureComment.objects.create(
+        author=actor,
+        countermeasure=countermeasure,
+        body=(note or f"Status changed from {current_status} to {target_status}."),
+        change_summary=f"status: {current_status} -> {target_status}",
+    )
+    recalculate_all_threats_for_countermeasure(countermeasure)
+    return countermeasure
+
+
 def get_countermeasures_for_threat(threat):
     """Return countermeasures linked to a scenario via the junction table."""
     return InstanceCountermeasure.objects.filter(threat_links__threat=threat)
@@ -895,9 +1028,10 @@ def create_risk(
 def countermeasure_effectiveness_for_risk(risk):
     """Average effectiveness of the controls on the risk's active threats.
 
-    Deduplicates shared countermeasures. Each control contributes its
-    user-assessed effectiveness, else the fallback for its status. None when
-    nothing contributes.
+    Deduplicates shared countermeasures. Gap, waived and decommissioned
+    controls always contribute zero, whatever effectiveness they carry. Any
+    other control contributes its user-assessed effectiveness, else the
+    fallback for its status. None when nothing contributes.
     """
     all_effectiveness = []
     seen_countermeasure_ids = set()
@@ -910,7 +1044,10 @@ def countermeasure_effectiveness_for_risk(risk):
             if countermeasure.id in seen_countermeasure_ids:
                 continue
             seen_countermeasure_ids.add(countermeasure.id)
-            if countermeasure.effectiveness is not None:
+
+            if countermeasure.status in NON_CREDIT_STATUSES:
+                all_effectiveness.append(0.0)
+            elif countermeasure.effectiveness is not None:
                 all_effectiveness.append(countermeasure.effectiveness)
             else:
                 all_effectiveness.append(

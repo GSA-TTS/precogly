@@ -6,14 +6,16 @@ from pathlib import Path
 from unittest import mock
 
 import yaml
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
+from apps.packs.generate_nist_800_53_pack import build_pack, canonical_control_id
 from apps.packs.services import (
     ImportResult,
     _find_pack_dir,
     _is_valid_slug,
     discover_packs_from_source,
     get_libraries_path,
+    import_pack_from_path,
     validate_pack,
 )
 
@@ -46,6 +48,112 @@ def _write_pack(base_dir: Path, relative_path: str, slug: str, **overrides) -> P
     pack_yaml = pack_dir / "pack.yaml"
     pack_yaml.write_text(yaml.safe_dump({"pack": pack_meta}))
     return pack_dir
+
+
+class NistPackGeneratorTests(SimpleTestCase):
+    def test_canonical_control_id_preserves_enhancement_identity(self):
+        self.assertEqual(canonical_control_id("ac-02"), "AC-2")
+        self.assertEqual(canonical_control_id("ac-2.01"), "AC-2(1)")
+
+    def test_build_pack_preserves_names_prose_parameters_and_hierarchy(self):
+        document = {
+            "catalog": {
+                "uuid": "catalog-uuid",
+                "metadata": {
+                    "title": "NIST catalog",
+                    "version": "5.2.0",
+                    "oscal-version": "1.2.2",
+                },
+                "groups": [
+                    {
+                        "id": "ac",
+                        "controls": [
+                            {
+                                "id": "ac-2",
+                                "title": "Account Management",
+                                "params": [{"id": "ac-2_prm_1"}],
+                                "parts": [
+                                    {
+                                        "name": "statement",
+                                        "parts": [
+                                            {
+                                                "name": "item",
+                                                "prose": "Manage accounts.",
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "name": "guidance",
+                                        "prose": "Not requirement prose.",
+                                    },
+                                ],
+                                "controls": [
+                                    {
+                                        "id": "ac-2.1",
+                                        "title": "Automated System Account Management",
+                                        "parts": [
+                                            {
+                                                "name": "statement",
+                                                "prose": "Automate accounts.",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+
+        requirements = build_pack(document, "digest")["frameworks"][0]["requirements"]
+
+        self.assertEqual(requirements[0]["section_code"], "AC-2")
+        self.assertEqual(requirements[0]["name"], "Account Management")
+        self.assertEqual(requirements[0]["description"], "Manage accounts.")
+        self.assertEqual(
+            requirements[0]["format_metadata"]["parameters"], ["ac-2_prm_1"]
+        )
+        self.assertEqual(requirements[1]["section_code"], "AC-2(1)")
+        self.assertEqual(requirements[1]["parent"], "AC-2")
+        self.assertEqual(requirements[1]["requirement_type"], "enhancement")
+
+    def test_generated_pack_contains_complete_canonical_catalog(self):
+        pack_path = (
+            Path(__file__).resolve().parents[3]
+            / "libraries/packs/standards/nist-800-53-r5/pack.yaml"
+        )
+        pack = yaml.safe_load(pack_path.read_text())
+        requirements = pack["frameworks"][0]["requirements"]
+        section_codes = [requirement["section_code"] for requirement in requirements]
+
+        self.assertEqual(len(requirements), 1196)
+        self.assertEqual(len(set(section_codes)), 1196)
+        self.assertEqual(
+            sum(
+                requirement["requirement_type"] == "control"
+                for requirement in requirements
+            ),
+            324,
+        )
+        self.assertEqual(
+            sum(
+                requirement["requirement_type"] == "enhancement"
+                for requirement in requirements
+            ),
+            872,
+        )
+        self.assertFalse(
+            [
+                requirement["section_code"]
+                for requirement in requirements
+                if not requirement["description"]
+            ]
+        )
+        self.assertEqual(
+            pack["pack"]["provenance"]["source_sha256"],
+            "01f37cf90ea99d92242c936cbfbdebcc338eef1f71454e2acac36cc56e9bc062",
+        )
 
 
 class FindPackDirTests(SimpleTestCase):
@@ -278,6 +386,62 @@ class TaxonomyReferenceValidationTests(SimpleTestCase):
 # =========================================================================
 # Phase 2: Duplicate ID detection (issue #10)
 # =========================================================================
+
+
+class FrameworkImportTests(TestCase):
+    def test_framework_import_preserves_requirement_metadata_and_hierarchy(self):
+        from apps.compliance.models import StandardFramework, StandardRequirement
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pack_dir = Path(tmp) / "nist-pack"
+            pack_dir.mkdir()
+            pack_yaml = {
+                "pack": {
+                    "schema_version": 1,
+                    "slug": "nist-pack",
+                    "name": "NIST Pack",
+                    "version": "1.0.0",
+                    "pack_type": "compliance",
+                },
+                "frameworks": [
+                    {
+                        "slug": "nist-test",
+                        "name": "NIST Test",
+                        "requirements": [
+                            {
+                                "section_code": "AC-2(1)",
+                                "name": "Enhancement",
+                                "description": "Enhancement prose",
+                                "parent": "AC-2",
+                                "requirement_type": "enhancement",
+                                "format_metadata": {"oscal_id": "ac-2.1"},
+                            },
+                            {
+                                "section_code": "AC-2",
+                                "name": "Account Management",
+                                "description": "Control prose",
+                                "requirement_type": "control",
+                            },
+                        ],
+                    }
+                ],
+            }
+            (pack_dir / "pack.yaml").write_text(yaml.safe_dump(pack_yaml))
+
+            result = import_pack_from_path(pack_dir, force=True)
+
+        self.assertTrue(result.success, result.errors)
+        framework = StandardFramework.objects.get(slug="nist-test")
+        parent = StandardRequirement.objects.get(
+            framework=framework, section_code="AC-2"
+        )
+        enhancement = StandardRequirement.objects.get(
+            framework=framework, section_code="AC-2(1)"
+        )
+        self.assertEqual(parent.name, "Account Management")
+        self.assertEqual(parent.requirement_type, "control")
+        self.assertEqual(enhancement.parent, parent)
+        self.assertEqual(enhancement.format_metadata["oscal_id"], "ac-2.1")
 
 
 class DuplicateIdValidationTests(SimpleTestCase):

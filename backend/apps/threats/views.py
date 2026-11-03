@@ -2,6 +2,7 @@
 Views for threats app.
 """
 
+from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -52,6 +53,7 @@ from .serializers import (
     CountermeasureCommentSerializer,
     CountermeasureLibraryListSerializer,
     CountermeasureLibrarySerializer,
+    CountermeasureTransitionSerializer,
     ExternalTaxonomySerializer,
     InstanceCountermeasureSerializer,
     InstanceCountermeasureStandardSerializer,
@@ -79,6 +81,7 @@ from .services import (
     recalculate_residual,
     recalculate_risks_for_threat,
     recalculate_threat_status,
+    transition_countermeasure,
 )
 
 
@@ -415,13 +418,24 @@ class InstanceThreatViewSet(WritableParentsMixin, viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        instance_cm = create_instance_countermeasure(
-            threat_model,
-            countermeasure_library=countermeasure,
-            status=request.data.get("status"),
-            user=request.user,
-        )
-        link_countermeasure(instance_cm, threat)
+        requested_status = request.data.get("status")
+        if (
+            requested_status
+            and requested_status not in InstanceCountermeasure.Status.values
+        ):
+            return Response(
+                {"error": "Invalid countermeasure status"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            instance_cm = create_instance_countermeasure(
+                threat_model,
+                countermeasure_library=countermeasure,
+                status=requested_status,
+                user=request.user,
+            )
+            link_countermeasure(instance_cm, threat)
         note_user_edit(threat)
         recalculate_threat_status(threat)
 
@@ -698,6 +712,45 @@ class InstanceCountermeasureViewSet(WritableParentsMixin, viewsets.ModelViewSet)
         return Response(InstanceCountermeasureSerializer(instance).data)
 
     @action(detail=True, methods=["post"])
+    def transition(self, request, pk=None):
+        """Apply a server-enforced countermeasure lifecycle transition."""
+        from django.core.exceptions import ValidationError
+
+        countermeasure = self.get_object()
+        input_serializer = CountermeasureTransitionSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        transition_data = input_serializer.validated_data
+        target_status = transition_data["status"]
+
+        owner = None
+        if "assigned_owner" in transition_data:
+            from django.contrib.auth import get_user_model
+
+            owner_id = transition_data["assigned_owner"]
+            if owner_id is not None:
+                owner = get_user_model().objects.filter(pk=owner_id).first()
+                if owner is None:
+                    return Response(
+                        {"assigned_owner": ["User not found."]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        try:
+            countermeasure = transition_countermeasure(
+                countermeasure,
+                target_status,
+                request.user,
+                owner=owner,
+                evidence_url=transition_data.get("evidence_url"),
+                note=transition_data.get("note", ""),
+            )
+        except ValidationError as error:
+            return Response(error.message_dict, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(countermeasure)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
     def link(self, request, pk=None):
         """Link this countermeasure to one more scenario of its model."""
         countermeasure = self.get_object()
@@ -741,18 +794,24 @@ class InstanceCountermeasureViewSet(WritableParentsMixin, viewsets.ModelViewSet)
                 {"error": "threat_id is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        threat = InstanceThreat.objects.filter(
+            id=threat_id, threat_model=countermeasure.threat_model
+        ).first()
+        if threat is None:
+            return Response(
+                {"error": "Link not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
         deleted_count, _ = CountermeasureThreatLink.objects.filter(
-            countermeasure=countermeasure, threat_id=threat_id
+            countermeasure=countermeasure, threat=threat
         ).delete()
         if deleted_count == 0:
             return Response(
                 {"error": "Link not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        threat = InstanceThreat.objects.filter(id=threat_id).first()
-        if threat is not None:
-            recalculate_threat_status(threat)
-            recalculate_risks_for_threat(threat)
+        recalculate_threat_status(threat)
+        recalculate_risks_for_threat(threat)
 
         if not InstanceCountermeasure.objects.filter(id=countermeasure.id).exists():
             # The post_delete rule already removed an orphaned generated row.
@@ -786,7 +845,9 @@ class InstanceCountermeasureViewSet(WritableParentsMixin, viewsets.ModelViewSet)
             raise NotFound("Threat not found.")
         check_write_access(self, threat)
         links = CountermeasureThreatLink.objects.filter(
-            threat=threat, countermeasure_id__in=ordered_ids
+            threat=threat,
+            countermeasure_id__in=ordered_ids,
+            countermeasure__threat_model_id=threat.threat_model_id,
         )
         by_countermeasure = {link.countermeasure_id: link for link in links}
         if len(by_countermeasure) != len(ordered_ids):

@@ -45,6 +45,7 @@ from .serializers import (
     BusinessObjectiveSerializer,
     OutOfScopeItemSerializer,
     ThreatModelCreateSerializer,
+    ThreatModelFidelitySerializer,
     ThreatModelListSerializer,
     ThreatModelReferenceImageSerializer,
     ThreatModelReferenceImageUploadSerializer,
@@ -462,9 +463,9 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                     or cm.countermeasure_name,
                     "countermeasure_library_id": cm.countermeasure_library_id,
                     "status": cm.status,
-                    "assigned_owner_email": cm.assigned_owner.email
-                    if cm.assigned_owner
-                    else None,
+                    "assigned_owner_email": (
+                        cm.assigned_owner.email if cm.assigned_owner else None
+                    ),
                     "linked_threats": linked_threats,
                 }
             )
@@ -656,6 +657,82 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
         filename = f"{safe_name}-cyclonedx-tm-bom.cdx.json"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+    @action(detail=True, methods=["get"], url_path="fidelity")
+    def fidelity(self, request, pk=None):
+        """Coverage stats for a threat model's countermeasure instances.
+
+        Lets external CI scripts assert minimum coverage thresholds before
+        accepting a CycloneDX import, without re-deriving the metrics from
+        a raw export. All fractions are 0.0-1.0; ``countermeasures`` is 0
+        when the threat model has no countermeasure instances yet, and
+        every coverage field is then also 0.0 rather than a divide-by-zero
+        error.
+        """
+        threat_model = self.get_object()
+        counts = threat_model.countermeasures.aggregate(
+            total=Count("id"),
+            nist_id=Count(
+                "id",
+                filter=Q(format_metadata__cyclonedx__nist_control_id__isnull=False),
+            ),
+            prose=Count("id", filter=~Q(countermeasure_description="")),
+            evidence_url=Count("id", filter=~Q(evidence_url="")),
+            compliance_standard=Count(
+                "id",
+                filter=Q(instance_standard_mappings__isnull=False),
+                distinct=True,
+            ),
+            inherited_flag=Count(
+                "id",
+                filter=Q(format_metadata__cyclonedx__origination_present__isnull=False),
+            ),
+            component_library=Count(
+                "id", filter=Q(countermeasure_library__isnull=False)
+            ),
+        )
+        total = counts["total"]
+
+        def _fraction(key):
+            return round(counts[key] / total, 4) if total else 0.0
+
+        serializer = ThreatModelFidelitySerializer(
+            {
+                "countermeasures": total,
+                "nist_id_coverage": _fraction("nist_id"),
+                "prose_coverage": _fraction("prose"),
+                "evidence_url_coverage": _fraction("evidence_url"),
+                "compliance_standard_coverage": _fraction("compliance_standard"),
+                "inherited_flag_coverage": _fraction("inherited_flag"),
+                "component_library_linked": _fraction("component_library"),
+                "schema_version": "2",
+                "transport_coverage": {
+                    "control_id": _fraction("nist_id"),
+                    "implementation_prose": _fraction("prose"),
+                    "evidence_url": _fraction("evidence_url"),
+                    "origination_marker": _fraction("inherited_flag"),
+                },
+                "native_coverage": {
+                    "requirement_mapping": _fraction("compliance_standard"),
+                    "library_link": _fraction("component_library"),
+                    "editable_scope": None,
+                    "provider_assertion": None,
+                    "immutable_verification": None,
+                    "review_decision": None,
+                },
+                "authorization_readiness": {
+                    "supported": False,
+                    "ready": False,
+                    "blockers": [
+                        "editable-scope-not-modeled",
+                        "provider-assertion-not-modeled",
+                        "immutable-verification-not-modeled",
+                        "review-decision-not-modeled",
+                    ],
+                },
+            }
+        )
+        return Response(serializer.data)
 
 
 class ThreatModelReferenceImageViewSet(viewsets.ModelViewSet):

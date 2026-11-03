@@ -93,12 +93,18 @@ class CanWrite(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
+        return self.user_can_write(request.user, obj)
+
+    @classmethod
+    def user_can_write(cls, user, obj):
+        """Return whether a user may mutate an object, independent of HTTP method."""
+
         organization = _get_organization(obj)
         if organization is None:
-            return _is_security_team_anywhere(request.user)
+            return _is_security_team_anywhere(user)
 
         # Check org-level role
-        org_membership = request.user.organization_memberships.filter(
+        org_membership = user.organization_memberships.filter(
             organization=organization
         ).first()
         if org_membership is None:
@@ -109,14 +115,14 @@ class CanWrite(permissions.BasePermission):
             return True
 
         # Regular members: check team role for the object's owning team
-        owning_team = self._get_owning_team(obj)
+        owning_team = cls._get_owning_team(obj)
         if owning_team is None:
             return False
 
         from apps.organizations.models import TeamMembership
 
         team_membership = TeamMembership.objects.filter(
-            user=request.user, team=owning_team
+            user=user, team=owning_team
         ).first()
         if team_membership is None:
             return False

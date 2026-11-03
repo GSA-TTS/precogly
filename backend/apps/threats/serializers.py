@@ -969,6 +969,7 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
             "countermeasure_name_display",
             "control_functions_display",
             "control_nature_display",
+            "verified_by",
             "verified_by_email",
             "assigned_owner_email",
             "threat_links",
@@ -1011,6 +1012,16 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         from apps.systems.models import OrgsystemComponent
+
+        if self.instance:
+            blocked = {"status", "verified_by", "verifiedBy"} & set(self.initial_data)
+            if blocked:
+                raise serializers.ValidationError(
+                    dict.fromkeys(
+                        sorted(blocked),
+                        "Use the transition action to change lifecycle state.",
+                    )
+                )
 
         from .services import resolve_target
 
@@ -1115,6 +1126,15 @@ class InstanceCountermeasureSerializer(serializers.ModelSerializer):
         if targets is not None or implemented_by is not None:
             instance.refresh_from_db()
         return instance
+
+
+class CountermeasureTransitionSerializer(serializers.Serializer):
+    """Input contract for a server-enforced countermeasure status transition."""
+
+    status = serializers.ChoiceField(choices=InstanceCountermeasure.Status.choices)
+    assigned_owner = serializers.IntegerField(required=False, allow_null=True)
+    evidence_url = serializers.URLField(required=False, allow_blank=True)
+    note = serializers.CharField(required=False, allow_blank=True)
 
 
 class VerificationTestSerializer(serializers.ModelSerializer):

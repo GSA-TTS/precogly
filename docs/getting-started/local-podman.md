@@ -105,6 +105,20 @@ cd precogly
 podman-compose -f docker-compose.yml -f podman-compose.override.yml up -d
 ```
 
+Before reusing an existing database volume, verify that its schema still
+matches the current managed Django models:
+
+```bash
+uvx podman-compose@latest \
+  -f docker-compose.yml \
+  -f podman-compose.override.yml \
+  --in-pod false \
+  exec backend python manage.py check_schema_drift
+```
+
+The command is read-only. It reports unexpected or missing columns and
+nullability differences; it never drops or repairs database objects.
+
 Verify:
 
 ```bash

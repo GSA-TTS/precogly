@@ -54,6 +54,17 @@ class AIProviderConfigSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "has_api_key", "created_at", "updated_at"]
+        # DRF 3.18 infers a regular unique-together validator from the
+        # conditional single-default constraint. That incorrectly rejects every
+        # second config in an organization before the view can demote the
+        # incumbent default. Validate only the unconditional name constraint;
+        # the view and database enforce the conditional default invariant.
+        validators = [
+            UniqueTogetherValidator(
+                queryset=AIProviderConfig.objects.all(),
+                fields=["organization", "name"],
+            )
+        ]
 
     def get_validators(self):
         """Drop the validator DRF derives from the one-default-per-org constraint.

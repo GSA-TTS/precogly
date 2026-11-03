@@ -9,7 +9,9 @@ from apps.threat_models.models import ThreatModel
 from apps.threats.models import CountermeasureThreatLink, InstanceCountermeasure
 from apps.threats.services import (
     STATUS_EFFECTIVENESS_FALLBACK,
+    countermeasure_effectiveness_for_risk,
     create_instance_threat,
+    create_risk,
     recalculate_threat_status,
 )
 
@@ -97,6 +99,11 @@ class ThreatStatusDerivationTests(StatusEffectivenessTestCase):
         status = recalculate_threat_status(self.threat)
         self.assertEqual(status, "addressable")
 
+    def test_waived_countermeasure_gives_addressable(self):
+        self._add_countermeasure("waived")
+        status = recalculate_threat_status(self.threat)
+        self.assertEqual(status, "addressable")
+
     def test_gap_countermeasure_gives_exposed(self):
         self._add_countermeasure("gap")
         status = recalculate_threat_status(self.threat)
@@ -119,3 +126,30 @@ class ThreatStatusDerivationTests(StatusEffectivenessTestCase):
         self._add_countermeasure("implemented")
         status = recalculate_threat_status(self.threat)
         self.assertEqual(status, "addressable")
+
+
+class ResidualRiskEffectivenessTests(StatusEffectivenessTestCase):
+    """Unavailable controls must not retain stale residual-risk credit."""
+
+    def setUp(self):
+        self.risk = create_risk(
+            self.tm,
+            name="Lifecycle effectiveness risk",
+            level="critical",
+            threat_ids=[self.threat.id],
+        )
+
+    def test_non_credit_statuses_ignore_explicit_effectiveness(self):
+        countermeasure = self._add_countermeasure(
+            "implemented",
+            effectiveness=0.9,
+        )
+
+        self.assertEqual(countermeasure_effectiveness_for_risk(self.risk), 0.9)
+
+        for status in ("gap", "waived", "decommissioned"):
+            with self.subTest(status=status):
+                countermeasure.status = status
+                countermeasure.save(update_fields=["status"])
+
+                self.assertEqual(countermeasure_effectiveness_for_risk(self.risk), 0.0)

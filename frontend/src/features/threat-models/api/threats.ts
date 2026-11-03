@@ -747,6 +747,35 @@ export function useLinkCountermeasure() {
   })
 }
 
+/** Apply a server-enforced countermeasure lifecycle transition. */
+export function useTransitionCountermeasure() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      countermeasureId,
+      status,
+      evidenceUrl,
+      assignedOwner,
+      note,
+    }: {
+      countermeasureId: number
+      status: CountermeasureStatus
+      evidenceUrl?: string
+      assignedOwner?: number
+      /** History entry text; for `waived` it is required and becomes the waiver reason. */
+      note?: string
+    }) =>
+      api.post<InstanceCountermeasure>(`/countermeasures/${countermeasureId}/transition/`, {
+        status,
+        ...(evidenceUrl !== undefined && { evidenceUrl }),
+        ...(assignedOwner !== undefined && { assignedOwner }),
+        ...(note !== undefined && { note }),
+      }),
+    onSettled: () => invalidateCountermeasureReaders(queryClient),
+  })
+}
+
 /**
  * Unlink a countermeasure from a scenario. An untouched generated control
  * that lost its last link is deleted; anything else stays and is listed as

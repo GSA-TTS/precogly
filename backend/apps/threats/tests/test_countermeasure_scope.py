@@ -297,12 +297,13 @@ class CountermeasureApiTests(ScopeFixture):
         control = create_instance_countermeasure(
             self.threat_model, countermeasure_name="P"
         )
-        denied = self.client_for(self.member).patch(
-            f"/api/countermeasures/{control.id}/", {"status": "platform"}, format="json"
+        url = f"/api/countermeasures/{control.id}/transition/"
+        denied = self.client_for(self.member).post(
+            url, {"status": "platform"}, format="json"
         )
         self.assertEqual(denied.status_code, 403)
-        allowed = self.client_for(self.security).patch(
-            f"/api/countermeasures/{control.id}/", {"status": "platform"}, format="json"
+        allowed = self.client_for(self.security).post(
+            url, {"status": "platform"}, format="json"
         )
         self.assertEqual(allowed.status_code, 200, allowed.content)
 
@@ -312,9 +313,9 @@ class CountermeasureApiTests(ScopeFixture):
         )
         link_countermeasure(control, self.threat)
         reason = "Risk accepted: the WAF already throttles this path"
-        response = self.client_for(self.security).patch(
-            f"/api/countermeasures/{control.id}/",
-            {"status": "waived", "waiverReason": reason},
+        response = self.client_for(self.security).post(
+            f"/api/countermeasures/{control.id}/transition/",
+            {"status": "waived", "note": reason},
             format="json",
         )
         self.assertEqual(response.status_code, 200, response.content)

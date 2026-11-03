@@ -29,6 +29,22 @@ from .models import (
 from .relationships import add_relationship, relationships_of
 
 
+class ThreatModelFidelitySerializer(serializers.Serializer):
+    """Stable 0.0-1.0 coverage contract for imported countermeasure fields."""
+
+    countermeasures = serializers.IntegerField(min_value=0)
+    nist_id_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    prose_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    evidence_url_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    compliance_standard_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    inherited_flag_coverage = serializers.FloatField(min_value=0.0, max_value=1.0)
+    component_library_linked = serializers.FloatField(min_value=0.0, max_value=1.0)
+    schema_version = serializers.CharField()
+    transport_coverage = serializers.DictField()
+    native_coverage = serializers.DictField()
+    authorization_readiness = serializers.DictField()
+
+
 class ThreatModelReferenceImageSerializer(serializers.ModelSerializer):
     """Serializer for ThreatModelReferenceImage model."""
 
@@ -789,6 +805,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
     reference_images = ThreatModelReferenceImageSerializer(many=True, read_only=True)
     blueprints = BlueprintSerializer(many=True, read_only=True)
     approved_at = serializers.SerializerMethodField()
+    can_write = serializers.SerializerMethodField()
 
     def get_approved_at(self, obj):
         review = ThreatModelReview.objects.filter(threat_model=obj).first()
@@ -829,6 +846,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
             "referenced_model_ids",
             "related_models",
             "reference_images",
+            "can_write",
             "risk_scoring_method",
             "created_at",
             "updated_at",
@@ -846,6 +864,7 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
             "organization_name",
             "owning_team_name",
             "business_unit_name",
+            "can_write",
         ]
 
     def validate(self, attrs):
@@ -859,6 +878,17 @@ class ThreatModelSerializer(ThreatModelFieldsMixin, serializers.ModelSerializer)
                 {"organization": "A threat model cannot move to another organization."}
             )
         return attrs
+
+    def get_can_write(self, obj):
+        """Return the backend's object-level write decision for this request."""
+        from apps.core.permissions import CanWrite
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        # The shared magic-link view serializes for an anonymous caller.
+        if user is None or not user.is_authenticated:
+            return False
+        return CanWrite.user_can_write(user, obj)
 
     def validate_owning_team(self, value):
         """Validate owning_team belongs to the same organization as the threat model."""

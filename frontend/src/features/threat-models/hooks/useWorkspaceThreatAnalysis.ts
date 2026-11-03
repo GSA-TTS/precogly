@@ -11,6 +11,7 @@ import { deriveThreatStatus, targetCanvasId } from '@/features/dfd-editor/types/
 import {
   useThreatModelThreats,
   useUpdateCountermeasure,
+  useTransitionCountermeasure,
   useUpdateTriageStatus,
   useReorderThreats,
   useReorderCountermeasures,
@@ -56,6 +57,7 @@ export function useWorkspaceThreatAnalysis(
 
   // Backend API mutations
   const updateCountermeasureMutation = useUpdateCountermeasure()
+  const transitionCountermeasureMutation = useTransitionCountermeasure()
   const updateTriageStatusMutation = useUpdateTriageStatus()
   const reorderThreatsMutation = useReorderThreats()
   const reorderCountermeasuresMutation = useReorderCountermeasures()
@@ -119,17 +121,15 @@ export function useWorkspaceThreatAnalysis(
       const parsed = parseCountermeasureId(countermeasureInstanceId)
 
       if (parsed.type === 'backend' && parsed.id !== null) {
-        updateCountermeasureMutation.mutate(
+        transitionCountermeasureMutation.mutate(
           {
             countermeasureId: parsed.id,
-            data: {
-              status,
-              ...(notes !== undefined && { waiverReason: notes }),
-            },
+            status,
+            ...(notes !== undefined && { note: notes }),
           },
           {
-            // The backend refuses platform status without the Security Team
-            // role (403); the toast says so and the refetch undoes the
+            // The backend enforces the lifecycle (owner, rationale, Security
+            // Team review); the toast says why and the refetch undoes the
             // optimistic change below.
             onError: (error) => toast.error(writeErrorMessage(error, 'Could not change the status')),
           }
@@ -159,7 +159,7 @@ export function useWorkspaceThreatAnalysis(
         }),
       }))
     },
-    [updateCountermeasureMutation]
+    [transitionCountermeasureMutation]
   )
 
   // Assign owner to countermeasure
@@ -176,16 +176,19 @@ export function useWorkspaceThreatAnalysis(
       if (countermeasure) {
         const parsed = parseCountermeasureId(countermeasure.id)
 
-        const data: { assignedOwner: number; status?: CountermeasureStatus } = { assignedOwner: assignee.userId }
-        if (newStatus) {
-          data.status = newStatus
-        }
-
         if (parsed.type === 'backend' && parsed.id !== null) {
-          updateCountermeasureMutation.mutate({
-            countermeasureId: parsed.id,
-            data,
-          })
+          if (newStatus) {
+            transitionCountermeasureMutation.mutate({
+              countermeasureId: parsed.id,
+              status: newStatus,
+              assignedOwner: assignee.userId,
+            })
+          } else {
+            updateCountermeasureMutation.mutate({
+              countermeasureId: parsed.id,
+              data: { assignedOwner: assignee.userId },
+            })
+          }
         }
       }
 
@@ -210,7 +213,7 @@ export function useWorkspaceThreatAnalysis(
         }),
       }))
     },
-    [state.threats, updateCountermeasureMutation]
+    [state.threats, transitionCountermeasureMutation, updateCountermeasureMutation]
   )
 
   // Update countermeasure priority

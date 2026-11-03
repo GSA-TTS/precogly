@@ -329,6 +329,7 @@ export interface ThreatModel {
   organizationName?: string
   owningTeam?: number | null
   owningTeamName?: string | null
+  canWrite?: boolean
   businessUnitName?: string | null
   /** Spec methodology values or custom names; default ["STRIDE"]. */
   methodologies?: string[]

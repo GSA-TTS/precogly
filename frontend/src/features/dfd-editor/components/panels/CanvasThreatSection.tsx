@@ -27,9 +27,9 @@ import { useWorkspace } from '@/contexts/WorkspaceContext'
 import {
   parseCountermeasureId,
   useThreatModelThreats,
+  useTransitionCountermeasure,
   useUpdateCountermeasure,
   useUpdateTriageStatus,
-  type UpdateCountermeasureInput,
 } from '@/features/threat-models/api/threats'
 import { writeErrorMessage } from '@/features/threat-models/lib/write-error-message'
 import { AddThreatDialog } from '../threat-analysis/AddThreatDialog'
@@ -93,6 +93,7 @@ export function CanvasThreatSection({
   const [editControlNature, setEditControlNature] = useState('')
   const { isSecurityTeam } = useWorkspace()
   const updateCountermeasure = useUpdateCountermeasure()
+  const transitionCountermeasure = useTransitionCountermeasure()
   const updateTriageStatus = useUpdateTriageStatus()
 
   const openCountermeasureEditor = (id: number, name: string, controlFunctions?: string[], controlNature?: string) => {
@@ -118,9 +119,13 @@ export function CanvasThreatSection({
     )
   }
 
-  const saveStatus = (countermeasureId: number, data: UpdateCountermeasureInput) => {
-    updateCountermeasure.mutate(
-      { countermeasureId, data },
+  /** Status changes go through the server-enforced lifecycle transition, not a PATCH. */
+  const saveStatus = (
+    countermeasureId: number,
+    data: { status: CountermeasureStatus; assignedOwner?: number; note?: string },
+  ) => {
+    transitionCountermeasure.mutate(
+      { countermeasureId, ...data },
       { onError: (error) => toast.error(writeErrorMessage(error, 'Could not change the status')) },
     )
   }
@@ -413,7 +418,7 @@ export function CanvasThreatSection({
                       </DialogHeader>
                       <WaiverReasonInput
                         onSubmit={(reason) => {
-                          saveStatus(statusPrompt.countermeasureId, { status: 'waived', waiverReason: reason })
+                          saveStatus(statusPrompt.countermeasureId, { status: 'waived', note: reason })
                           setStatusPrompt(null)
                         }}
                         onCancel={() => setStatusPrompt(null)}

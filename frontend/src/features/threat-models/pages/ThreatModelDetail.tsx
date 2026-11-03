@@ -551,6 +551,8 @@ export function ThreatModelDetail() {
     )
   }
 
+  const canWrite = threatModel.canWrite === true
+
   // 45px: the navbar is h-11 plus its 1px bottom border; 44px left the page 1px too tall.
   return (
     <div className="flex flex-col h-[calc(100vh-45px)]">
@@ -579,7 +581,7 @@ export function ThreatModelDetail() {
               </>
             )}
             <span className="text-muted-foreground">/</span>
-            {isEditingName ? (
+            {isEditingName && canWrite ? (
               <input
                 ref={nameInputRef}
                 type="text"
@@ -592,11 +594,17 @@ export function ThreatModelDetail() {
             ) : (
               <button
                 onClick={handleStartEditingName}
-                className="font-semibold truncate hover:text-primary group flex items-center gap-1 cursor-pointer"
-                title="Click to rename"
+                disabled={!canWrite}
+                className={cn(
+                  'font-semibold truncate flex items-center gap-1',
+                  canWrite && 'hover:text-primary group cursor-pointer'
+                )}
+                title={canWrite ? 'Click to rename' : 'Read-only access'}
               >
                 {threatModel.name}
-                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground" />
+                {canWrite && (
+                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity text-muted-foreground" />
+                )}
               </button>
             )}
             <span className="text-muted-foreground">/</span>
@@ -612,16 +620,17 @@ export function ThreatModelDetail() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
-            {/* Share button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs gap-1"
-              onClick={() => setShareLinkDialogOpen(true)}
-            >
-              <Share2 className="h-3 w-3" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => setShareLinkDialogOpen(true)}
+              >
+                <Share2 className="h-3 w-3" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+            )}
 
             {/* Export button */}
             <DropdownMenu>
@@ -645,16 +654,17 @@ export function ThreatModelDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Delete button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-3 w-3" />
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-3 w-3" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            )}
 
           </div>
         </div>
