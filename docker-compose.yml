@@ -43,6 +43,12 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-precogly}:${POSTGRES_PASSWORD:-precogly_dev_password}@db:5432/${POSTGRES_DB:-precogly}
       DJANGO_SETTINGS_MODULE: config.settings.development
       ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
+      AI_SECRET_KEY: ${AI_SECRET_KEY:-precogly-dev-ai-secret-key-change-in-production}
+      AI_SUGGESTIONS_ENABLED: ${AI_SUGGESTIONS_ENABLED:-False}
+      AI_BASE_URL: ${AI_BASE_URL:-http://localhost:1234/v1}
+      AI_MODEL: ${AI_MODEL:-local-model}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_REQUEST_TIMEOUT: ${AI_REQUEST_TIMEOUT:-60}
       # cryptography 50 bundles an OpenSSL that probes ARM CPU features at import.
       # On recent Apple Silicon the Docker VM advertises SME/SVE but faults on
       # them, so the backend dies with "Illegal instruction" (exit 132). Turning
