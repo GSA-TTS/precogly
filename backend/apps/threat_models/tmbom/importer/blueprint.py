@@ -60,6 +60,14 @@ def _keep_ref(row, data: dict, kind: str | None = None) -> None:
     remember_ref(row, data.get("bom-ref", ""))
     if kind is not None:
         keep_unknown(row, data, kind)
+    for prop in data.get("properties") or []:
+        if isinstance(prop, dict) and prop.get("name") in ("crm:icon", "precogly:icon"):
+            val = str(prop.get("value") or "").strip()
+            if val:
+                metadata = dict(row.format_metadata or {})
+                metadata["icon"] = val
+                row.format_metadata = metadata
+                break
     row.save(update_fields=["format_metadata"])
 
 

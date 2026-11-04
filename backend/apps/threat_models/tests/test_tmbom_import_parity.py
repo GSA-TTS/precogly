@@ -15,6 +15,7 @@ from apps.compliance.models import (
     StandardRequirement,
 )
 from apps.organizations.models import Organization, OrganizationMember
+from apps.systems.models import OrgsystemComponent
 from apps.threat_models.models import ThreatModel
 from apps.threat_models.tmbom import TmBomAdapter
 from apps.threats.models import (
@@ -225,3 +226,49 @@ class ReplaceOnImportTests(ParityTestCase):
         )
         self.assertEqual(self._post(_document(), replace=foreign.pk).status_code, 404)
         self.assertTrue(ThreatModel.objects.filter(pk=foreign.pk).exists())
+
+
+class ComponentIconImportTests(ParityTestCase):
+    def test_crm_icon_property_is_stored_on_format_metadata(self):
+        doc = _document()
+        doc["blueprints"][0]["assets"] = [
+            {
+                "bom-ref": "asset-1",
+                "name": "App",
+                "type": "process",
+                "properties": [{"name": "crm:icon", "value": "cloud"}],
+            }
+        ]
+        model, _ = self._import(doc)
+        comp = OrgsystemComponent.objects.get(blueprint=model.default_blueprint)
+        self.assertEqual(comp.format_metadata.get("icon"), "cloud")
+
+    def test_pack_icon_map_resolves_fallback_token_svg(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from apps.packs.models import LibraryPack
+        from apps.packs.services import _load_components
+        from apps.systems.models import ComponentLibrary
+
+        pack = LibraryPack.objects.create(
+            slug="cloudgov-paas", name="Cloud.gov PaaS", version="1.0.0"
+        )
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "pack.yaml").write_text(
+                "pack:\n  slug: cloudgov-paas\n  icon_map:\n    - component: cloudgov-apps\n      icon: application\n",
+                encoding="utf-8",
+            )
+            comp_file = root / "components.yaml"
+            comp_file.write_text(
+                "components:\n"
+                "  - id: cloudgov-apps\n"
+                "    name: Cloud.gov Apps\n"
+                "    category: process\n"
+                "    type: compute\n",
+                encoding="utf-8",
+            )
+            _load_components(pack, comp_file)
+        lib = ComponentLibrary.objects.get(qualified_slug="cloudgov-paas/cloudgov-apps")
+        self.assertIn("<svg", lib.icon_svg)

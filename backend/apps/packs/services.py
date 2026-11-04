@@ -2853,6 +2853,96 @@ def activate_pending_taxonomy_overlays(taxonomy_slug: str) -> dict:
     return results
 
 
+_SVG_HEAD = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+    'fill="none" stroke="currentColor" stroke-width="2">'
+)
+_TOKEN_ICON_SVGS: dict[str, str] = {
+    "cloud": f'{_SVG_HEAD}<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>',
+    "application": (
+        f'{_SVG_HEAD}<rect width="18" height="18" x="3" y="3" rx="2"/>'
+        '<path d="M3 9h18"/><path d="M9 21V9"/></svg>'
+    ),
+    "database": (
+        f'{_SVG_HEAD}<ellipse cx="12" cy="5" rx="9" ry="3"/>'
+        '<path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>'
+    ),
+    "storage": (
+        f'{_SVG_HEAD}<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4'
+        'A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>'
+    ),
+    "cache": f'{_SVG_HEAD}<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    "search": f'{_SVG_HEAD}<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+    "globe": (
+        f'{_SVG_HEAD}<circle cx="12" cy="12" r="10"/>'
+        '<path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>'
+    ),
+    "static-site": (
+        f'{_SVG_HEAD}<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12'
+        'a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    ),
+    "server": (
+        f'{_SVG_HEAD}<rect width="20" height="8" x="2" y="2" rx="2"/>'
+        '<rect width="20" height="8" x="2" y="14" rx="2"/>'
+        '<line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>'
+    ),
+    "containers": (
+        f'{_SVG_HEAD}<path d="M16.5 9.4 7.55 4.24"/>'
+        '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4'
+        'A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'
+        '<polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>'
+    ),
+    "network": (
+        f'{_SVG_HEAD}<rect x="16" y="16" width="6" height="6" rx="1"/>'
+        '<rect x="2" y="16" width="6" height="6" rx="1"/>'
+        '<rect x="9" y="2" width="6" height="6" rx="1"/>'
+        '<path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>'
+    ),
+    "flask": (
+        f'{_SVG_HEAD}<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55'
+        "a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127"
+        'A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>'
+    ),
+    "analytics": (
+        f'{_SVG_HEAD}<line x1="18" x2="18" y1="20" y2="10"/>'
+        '<line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>'
+    ),
+}
+
+
+def _resolve_component_icon_svg(
+    pack_dir: Path,
+    comp_id: str,
+    icon_spec,
+    icon_map: dict[str, str],
+    import_warnings: list[str],
+) -> str:
+    candidate = icon_spec
+    if isinstance(candidate, dict):
+        candidate = (
+            candidate.get("slug")
+            or candidate.get("name")
+            or candidate.get("path")
+            or ""
+        )
+    candidate = str(candidate or "").strip() or icon_map.get(comp_id, "")
+    if not candidate:
+        return ""
+    for rel in (candidate, f"icons/{candidate}.svg", f"icons/{candidate}"):
+        icon_file = pack_dir / rel
+        if icon_file.is_file():
+            try:
+                return icon_file.read_text(encoding="utf-8")
+            except Exception as e:
+                msg = f"Could not read icon '{rel}' for '{comp_id}': {e}"
+                logger.warning(msg)
+                import_warnings.append(msg)
+                return ""
+    if candidate in _TOKEN_ICON_SVGS:
+        return _TOKEN_ICON_SVGS[candidate]
+    return ""
+
+
 def _load_components(
     library_pack: LibraryPack, file_path: Path, import_warnings: list[str] | None = None
 ) -> int:
@@ -2874,6 +2964,21 @@ def _load_components(
         logger.error(f"Error loading components.yaml: {e}")
         return 0
 
+    icon_map: dict[str, str] = {}
+    pack_yaml = file_path.parent / "pack.yaml"
+    if pack_yaml.is_file():
+        try:
+            pack_doc = yaml.safe_load(pack_yaml.read_text(encoding="utf-8")) or {}
+            for entry in (pack_doc.get("pack") or {}).get("icon_map") or []:
+                if (
+                    isinstance(entry, dict)
+                    and entry.get("component")
+                    and entry.get("icon")
+                ):
+                    icon_map[str(entry["component"])] = str(entry["icon"])
+        except Exception:
+            logger.debug("Could not read icon_map from %s", pack_yaml)
+
     components_list = data.get("components", [])
 
     # Pass 1: Create/update all records without parent
@@ -2888,18 +2993,9 @@ def _load_components(
             continue
 
         qualified_slug = f"{library_pack.slug}/{comp_id}"
-
-        icon_svg = ""
-        icon_path = comp.get("icon", "")
-        if icon_path:
-            icon_file = file_path.parent / icon_path
-            if icon_file.exists():
-                try:
-                    icon_svg = icon_file.read_text(encoding="utf-8")
-                except Exception as e:
-                    msg = f"Could not read icon '{icon_path}' for '{comp_id}': {e}"
-                    logger.warning(msg)
-                    import_warnings.append(msg)
+        icon_svg = _resolve_component_icon_svg(
+            file_path.parent, comp_id, comp.get("icon", ""), icon_map, import_warnings
+        )
 
         instance, _ = ComponentLibrary.objects.update_or_create(
             qualified_slug=qualified_slug,
