@@ -10,6 +10,12 @@ DEBUG = True
 # this settings module is never loaded in production, which uses production.py.
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "backend"]  # noqa: S104
 
+# Default dev Fernet secret so saving an AIProviderConfig API key via
+# Settings -> AI Providers works out of the box in local dev without editing .env.
+AI_SECRET_KEY = env(  # noqa: F405
+    "AI_SECRET_KEY", default="precogly-dev-ai-secret-key-change-in-production"
+)
+
 # Development-only apps
 INSTALLED_APPS += ["django_extensions"]  # noqa: F405
 

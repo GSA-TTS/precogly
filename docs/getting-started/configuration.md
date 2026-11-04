@@ -164,6 +164,16 @@ AI_MODEL=gpt-4o
 AI_API_KEY=sk-your-key-here
 ```
 
+**GSA USAi** (OpenAI-compatible; use a vision-capable model such as `claude-opus-4-7` for image-to-DFD generation):
+
+```bash
+AI_SUGGESTIONS_ENABLED=True
+AI_BASE_URL=https://api.usai.gsa.gov/v1
+AI_MODEL=claude-opus-4-7
+AI_API_KEY=<paste-usai-key-here>
+AI_REQUEST_TIMEOUT=60
+```
+
 ### Per-Organization Overrides
 
 Organizations can bring their own model by saving an AI provider config through the settings UI (**Settings → AI Providers**). This overrides the operator fallback for that organization only. The stored API key is encrypted at rest using `AI_SECRET_KEY`.

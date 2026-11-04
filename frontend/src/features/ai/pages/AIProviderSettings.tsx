@@ -322,6 +322,44 @@ export function AIProviderSettings() {
           </DialogHeader>
           {form && (
             <div className="space-y-4">
+              {!editing && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Presets:</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        name: form.name || 'GSA USAi',
+                        baseUrl: 'https://api.usai.gsa.gov/v1',
+                        model: form.model || 'claude-opus-4-7',
+                        isDefault: true,
+                      })
+                    }
+                  >
+                    GSA USAi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        name: form.name || 'Local LM Studio',
+                        baseUrl: 'http://localhost:1234/v1',
+                        model: form.model || 'local-model',
+                      })
+                    }
+                  >
+                    LM Studio
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="provider-name">Name</Label>
                 <Input
