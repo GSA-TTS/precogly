@@ -1093,6 +1093,44 @@ class InstanceCountermeasureStandard(TimestampedModel):
         return f"{self.countermeasure} - {self.requirement} ({self.sufficiency})"
 
 
+class InstanceThreatStandard(TimestampedModel):
+    """Instance-level compliance mapping for threat scenarios (#9).
+
+    Links an ``InstanceThreat`` directly to a ``StandardRequirement`` (or holds a
+    snapshot ``section_code`` / ``framework_name`` when the framework is not
+    installed yet), so unmitigated threats in scope for a control appear on the
+    compliance matrix without relying on ``format_metadata`` traversal.
+    """
+
+    tenancy = Tenancy.TENANT_OWNED
+
+    threat = models.ForeignKey(
+        InstanceThreat,
+        on_delete=models.CASCADE,
+        related_name="instance_standard_mappings",
+    )
+    requirement = models.ForeignKey(
+        "compliance.StandardRequirement",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="instance_threat_mappings",
+    )
+    section_code = models.CharField(
+        max_length=50, blank=True, default="", db_index=True
+    )
+    framework_name = models.CharField(max_length=255, blank=True, default="")
+    requirement_description = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = ["threat", "requirement"]
+        verbose_name = "Threat compliance mapping"
+        verbose_name_plural = "Threat compliance mappings"
+
+    def __str__(self):
+        return f"{self.threat} - {self.requirement or self.section_code}"
+
+
 def build_taxonomy_snapshot(threat_library):
     """Build a snapshot list of taxonomy entries for a threat library."""
     if not threat_library:

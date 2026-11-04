@@ -290,6 +290,21 @@ FIELD_HOMES: dict[str, dict[str, str | tuple[str, str]]] = {
         "framework_name": "standards[].name",
         "requirement_description": "standards[].requirements[].text",
     },
+    "threats.InstanceThreatStandard": {
+        "threat": ROW_LINK,
+        "requirement": not_exported(
+            "threat control mappings round-trip via foreign ctrl:id properties"
+        ),
+        "section_code": not_exported(
+            "threat control mappings round-trip via foreign ctrl:id properties"
+        ),
+        "framework_name": not_exported(
+            "threat control mappings round-trip via foreign ctrl:id properties"
+        ),
+        "requirement_description": not_exported(
+            "threat control mappings round-trip via foreign ctrl:id properties"
+        ),
+    },
     "compliance.StandardFramework": {
         "name": "definitions.standards[].name (when a control cites it)",
         "version": "definitions.standards[].version (when a control cites it)",
