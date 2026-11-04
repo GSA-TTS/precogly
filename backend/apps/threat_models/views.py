@@ -593,11 +593,39 @@ class ThreatModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        replaced = None
+        replace_id = request.query_params.get("replace")
+        if replace_id:
+            replaced = (
+                ThreatModel.objects.visible_to(request.user)
+                .filter(pk=replace_id)
+                .first()
+            )
+            if replaced is None:
+                return Response(
+                    {"detail": f"Threat model {replace_id} to replace was not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            if not CanWrite.user_can_write(request.user, replaced):
+                return Response(
+                    {
+                        "detail": "You do not have permission to replace that threat model."
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         adapter = TmBomAdapter()
         try:
-            threat_model, summary = adapter.import_data(
-                json_data, organization, request.user
-            )
+            # Import and delete together: a rejected document leaves the
+            # existing model untouched (#31 idempotent re-import).
+            with transaction.atomic():
+                threat_model, summary = adapter.import_data(
+                    json_data, organization, request.user
+                )
+                if replaced is not None:
+                    replaced_id = str(replaced.pk)
+                    replaced.delete()
+                    summary["replaced_threat_model"] = replaced_id
         except (TmBomImportError, ValidationError) as e:
             detail = str(e)
             if hasattr(e, "detail"):
