@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Download, FileText, FolderOpen, Pencil, ArrowLeft, Save, ChevronDown, ShieldAlert, Undo2, Redo2, HelpCircle, ImageDown, PanelLeft, MoreHorizontal } from 'lucide-react'
+import { Download, FileText, FolderOpen, Pencil, ArrowLeft, Save, ChevronDown, ShieldAlert, Undo2, Redo2, HelpCircle, ImageDown, PanelLeft, MoreHorizontal, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -52,6 +52,7 @@ import {
 } from '../lib/file-system-access'
 import { exportGuestWordDoc } from '../lib/guestWordExport'
 import { GuestSystemContextModal } from './GuestSystemContextModal'
+import { GuestWalkthroughWizard } from './GuestWalkthroughWizard'
 
 function titleToFilename(title: string): string {
   return title.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase() || 'diagram'
@@ -114,6 +115,7 @@ export function GuestEditorHeader({
 
   // System context modal state
   const [showSystemContextModal, setShowSystemContextModal] = useState(false)
+  const [showWalkthroughWizard, setShowWalkthroughWizard] = useState(false)
 
   // Save dialog state (fallback for browsers without File System Access API)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -407,6 +409,19 @@ export function GuestEditorHeader({
             </TooltipTrigger>
             <TooltipContent>Define system context, data assets, and assumptions</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowWalkthroughWizard(true)}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5 text-teal-600" />
+                Guided Walkthrough
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>FIPS 199 categorization, pack architecture, and NIST 800-53 baseline wizard</TooltipContent>
+          </Tooltip>
 
           {/* Canvas tools (from toolbar) */}
           {(onUndo || onRedo) && (
@@ -666,6 +681,11 @@ export function GuestEditorHeader({
       <GuestSystemContextModal
         open={showSystemContextModal}
         onOpenChange={setShowSystemContextModal}
+      />
+      <GuestWalkthroughWizard
+        open={showWalkthroughWizard}
+        onOpenChange={setShowWalkthroughWizard}
+        onApplyToCanvas={onLoadFromFile}
       />
     </>
   )
