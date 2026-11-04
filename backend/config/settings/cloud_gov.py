@@ -3,7 +3,12 @@
 import json
 import os
 
-from .production import *  # noqa: F401, F403
+import environ
+
+from .production import *  # noqa: F403
+
+_production_middleware = MIDDLEWARE  # noqa: F405
+_production_databases = DATABASES  # noqa: F405
 
 env = environ.Env()
 
@@ -13,6 +18,7 @@ SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # WhiteNoise serves collected static files (incl. Django admin) behind gunicorn.
+MIDDLEWARE = list(_production_middleware)
 if "whitenoise.middleware.WhiteNoiseMiddleware" not in MIDDLEWARE:
     _sec_idx = MIDDLEWARE.index("django.middleware.security.SecurityMiddleware")
     MIDDLEWARE.insert(_sec_idx + 1, "whitenoise.middleware.WhiteNoiseMiddleware")
@@ -83,13 +89,18 @@ try:
     for label in ("aws-rds", "csb-aws-postgresql"):
         if label in vcap_data:
             creds = vcap_data[label][0].get("credentials", {})
-            DATABASES["default"] = {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": creds.get("dbname") or creds.get("database") or creds.get("name"),
-                "USER": creds.get("username") or creds.get("user"),
-                "PASSWORD": creds.get("password"),
-                "HOST": creds.get("host") or creds.get("hostname"),
-                "PORT": creds.get("port") or "5432",
+            DATABASES = {
+                **_production_databases,
+                "default": {
+                    "ENGINE": "django.db.backends.postgresql",
+                    "NAME": creds.get("dbname")
+                    or creds.get("database")
+                    or creds.get("name"),
+                    "USER": creds.get("username") or creds.get("user"),
+                    "PASSWORD": creds.get("password"),
+                    "HOST": creds.get("host") or creds.get("hostname"),
+                    "PORT": creds.get("port") or "5432",
+                },
             }
             break
 except (json.JSONDecodeError, KeyError, IndexError):
@@ -99,7 +110,10 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {"format": "[{levelname}] {asctime} {module} | {message}", "style": "{"},
+        "verbose": {
+            "format": "[{levelname}] {asctime} {module} | {message}",
+            "style": "{",
+        },
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "verbose"},

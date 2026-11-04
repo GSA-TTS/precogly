@@ -20,10 +20,15 @@ class SchemaDriftTests(TestCase):
 
         original = connection.introspection.get_table_description
 
+        # Deliberately not a model field. `source` served this role before
+        # upstream promoted it to a real InstanceCountermeasure column, at
+        # which point injecting it stopped being drift at all.
+        phantom = "legacy_drift_probe"
+
         def description(cursor, table_name):
             columns = original(cursor, table_name)
             if table_name == "threats_instancecountermeasure":
-                return [*columns, SimpleNamespace(name="source", null_ok=False)]
+                return [*columns, SimpleNamespace(name=phantom, null_ok=False)]
             return columns
 
         with patch.object(
@@ -37,7 +42,7 @@ class SchemaDriftTests(TestCase):
             {
                 "code": "unexpected-column",
                 "table": "threats_instancecountermeasure",
-                "column": "source",
+                "column": phantom,
             },
             findings,
         )

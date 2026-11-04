@@ -15,13 +15,13 @@ from apps.organizations.models import (
 from apps.systems.models import OrgsystemComponent
 from apps.threat_models.models import ThreatModel
 from apps.threats.models import (
-    ComponentInstanceThreat,
     CountermeasureComment,
     CountermeasureThreatLink,
     InstanceCountermeasure,
     InstanceCountermeasureTest,
     VerificationTest,
 )
+from apps.threats.services import create_instance_threat
 
 User = get_user_model()
 
@@ -49,10 +49,10 @@ class CountermeasureTransitionTests(TestCase):
             owning_team=cls.team,
         )
         component = OrgsystemComponent.objects.create(
-            threat_model=cls.threat_model, name="Application"
+            blueprint=cls.threat_model.default_blueprint, name="Application"
         )
-        cls.threat = ComponentInstanceThreat.objects.create(
-            component=component, threat_name="Misuse", inherent_severity="high"
+        cls.threat = create_instance_threat(
+            cls.threat_model, targets=[component], threat_name="Misuse", level="high"
         )
 
     @classmethod
@@ -73,7 +73,7 @@ class CountermeasureTransitionTests(TestCase):
             status="gap",
         )
         CountermeasureThreatLink.objects.create(
-            countermeasure=self.countermeasure, component_threat=self.threat
+            countermeasure=self.countermeasure, threat=self.threat
         )
 
     def _client(self, user):

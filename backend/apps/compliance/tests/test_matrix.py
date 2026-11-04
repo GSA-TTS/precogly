@@ -6,15 +6,14 @@ from rest_framework.test import APITestCase
 
 from apps.compliance.models import StandardFramework, StandardRequirement
 from apps.organizations.models import Organization, OrganizationMember
-from apps.systems.models import DataFlow, OrgsystemComponent
+from apps.systems.models import Flow, OrgsystemComponent
 from apps.threat_models.models import ThreatModel
 from apps.threats.models import (
-    ComponentInstanceThreat,
     CountermeasureThreatLink,
-    DataFlowInstanceThreat,
     InstanceCountermeasure,
     InstanceCountermeasureStandard,
 )
+from apps.threats.services import create_instance_threat
 
 User = get_user_model()
 
@@ -59,30 +58,34 @@ class ComplianceMatrixTests(APITestCase):
             description="Baseline configuration",
         )
 
+        blueprint = cls.tm.default_blueprint
         cls.component = OrgsystemComponent.objects.create(
-            threat_model=cls.tm, name="API"
+            blueprint=blueprint, name="API"
         )
-        cls.dest = OrgsystemComponent.objects.create(threat_model=cls.tm, name="DB")
-        cls.flow = DataFlow.objects.create(
-            source_component=cls.component, dest_component=cls.dest, label="query"
+        cls.dest = OrgsystemComponent.objects.create(blueprint=blueprint, name="DB")
+        cls.flow = Flow.objects.create(
+            blueprint=blueprint,
+            source_component=cls.component,
+            dest_component=cls.dest,
+            label="query",
         )
-        cls.threat = ComponentInstanceThreat.objects.create(
-            component=cls.component,
-            threat_name="Spoofing",
-            inherent_severity="high",
+        cls.threat = create_instance_threat(
+            cls.tm, targets=[cls.component], threat_name="Spoofing", level="high"
         )
-        cls.flow_threat = DataFlowInstanceThreat.objects.create(
-            data_flow=cls.flow,
+        cls.flow_threat = create_instance_threat(
+            cls.tm,
+            targets=[cls.flow],
             threat_name="Sniffing",
-            inherent_severity="medium",
+            level="medium",
             format_metadata={"cyclonedx": {"ctrl_id": "AC-3"}},
         )
         # Threat-side ctrl_id fallback: this threat is not linked to any CM, so
         # it can only reach AU-6 via its own format_metadata.
-        cls.orphan_threat = ComponentInstanceThreat.objects.create(
-            component=cls.component,
+        cls.orphan_threat = create_instance_threat(
+            cls.tm,
+            targets=[cls.component],
             threat_name="Undetected access",
-            inherent_severity="medium",
+            level="medium",
             format_metadata={"cyclonedx": {"ctrl_id": "AU-6"}},
         )
 
@@ -91,7 +94,6 @@ class ComplianceMatrixTests(APITestCase):
             countermeasure_name="MFA everywhere",
             status="implemented",
             control_nature="preventive",
-            is_inherited=False,
             format_metadata={
                 "cyclonedx": {
                     "providing_system": "Platform IAM",
@@ -115,7 +117,7 @@ class ComplianceMatrixTests(APITestCase):
             sufficiency="full",
         )
         CountermeasureThreatLink.objects.create(
-            countermeasure=cls.cm_ac3, component_threat=cls.threat
+            countermeasure=cls.cm_ac3, threat=cls.threat
         )
 
         cls.cm_au6 = InstanceCountermeasure.objects.create(

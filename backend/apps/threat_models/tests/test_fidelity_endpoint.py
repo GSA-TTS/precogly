@@ -76,7 +76,6 @@ class ThreatModelFidelityEndpointTests(APITestCase):
             countermeasure_name="Full coverage",
             countermeasure_description="Has prose",
             evidence_url="https://example.gov/evidence",
-            is_inherited=False,
             countermeasure_library=library_entry,
             format_metadata={
                 "cyclonedx": {

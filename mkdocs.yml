@@ -45,8 +45,9 @@ nav:
       - Library Packs: concepts/library-packs.md
       - DFD Editor: concepts/dfd-editor.md
       - Threat Analysis: concepts/threat-analysis.md
+      - Use Cases and Abuse Cases: concepts/use-cases-and-abuse-cases.md
       - Threat Model as Code: concepts/threat-model-as-code.md
-      - Zone Protections: concepts/zone-protections.md
+      - Zones and Boundaries: concepts/zones-and-boundaries.md
       - Platform Controls: concepts/platform-controls.md
       - Completion Status: concepts/completion-status.md
       - Reference Images: concepts/reference-images.md
@@ -76,6 +77,7 @@ nav:
       - Overview: contributing/index.md
       - Development Setup: contributing/development-setup.md
       - Creating Library Packs: contributing/creating-library-packs.md
+      - Fork Feature Inventory (2026-10-29): contributing/fork-feature-inventory-2026-10-29.md
 
 markdown_extensions:
   - admonition

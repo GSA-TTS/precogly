@@ -22,15 +22,11 @@ import {
   MemberManagement,
   TeamManagement,
   BusinessUnitsSettings,
+  SystemsSettings,
   AIProviderSettings,
+  GuestThreatAnalysis,
 } from '@/pages'
-import { lazy, Suspense } from 'react'
-
-const GuestThreatAnalysis = lazy(() =>
-  import('@/features/guest-editor/components/GuestThreatAnalysis').then((m) => ({
-    default: m.GuestThreatAnalysis,
-  }))
-)
+import { Suspense } from 'react'
 
 // When VITE_GUEST_ONLY is set, auth pages redirect to the guest editor
 const isGuestOnly = import.meta.env.VITE_GUEST_ONLY === 'true'
@@ -59,7 +55,7 @@ export const router = createBrowserRouter([
   },
   // Public magic link route (no auth required)
   {
-    path: '/share/:token',
+    path: '/share/:token/:tab?',
     element: isGuestOnly ? <Navigate to="/" replace /> : <SharedThreatModelView />,
   },
   // Team invitation route (works for both logged-in and logged-out users)
@@ -83,7 +79,9 @@ export const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'threat-models', element: <ThreatModels /> },
       { path: 'threat-models/new', element: <Navigate to="/threat-models" replace /> },
-      { path: 'threat-models/:id', element: <ThreatModelDetail /> },
+      // One URL per tab, and per view of Threat Analysis (/threat-analysis/components,
+      // /use-cases, /table). Bare or unknown segments redirect inside the page.
+      { path: 'threat-models/:id/:tab?/:view?', element: <ThreatModelDetail /> },
       { path: 'threat-models/:id/diagrams/:diagramId', element: <DFDEditor /> },
       // New unified Libraries page
       { path: 'libraries', element: <Libraries /> },
@@ -106,6 +104,7 @@ export const router = createBrowserRouter([
           { path: 'members', element: <MemberManagement /> },
           { path: 'teams', element: <TeamManagement /> },
           { path: 'business-units', element: <BusinessUnitsSettings /> },
+          { path: 'systems', element: <SystemsSettings /> },
           { path: 'ai-providers', element: <AIProviderSettings /> },
         ],
       },

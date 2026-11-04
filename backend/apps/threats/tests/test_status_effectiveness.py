@@ -6,16 +6,12 @@ from django.test import TestCase
 from apps.organizations.models import Organization, OrganizationMember
 from apps.systems.models import OrgsystemComponent
 from apps.threat_models.models import ThreatModel
-from apps.threats.models import (
-    ComponentInstanceThreat,
-    CountermeasureThreatLink,
-    InstanceCountermeasure,
-    Risk,
-    RiskThreat,
-)
+from apps.threats.models import CountermeasureThreatLink, InstanceCountermeasure
 from apps.threats.services import (
     STATUS_EFFECTIVENESS_FALLBACK,
-    compute_residual_score,
+    countermeasure_effectiveness_for_risk,
+    create_instance_threat,
+    create_risk,
     recalculate_threat_status,
 )
 
@@ -36,10 +32,10 @@ class StatusEffectivenessTestCase(TestCase):
         )
         cls.tm = ThreatModel.objects.create(name="Test TM", organization=cls.org)
         cls.component = OrgsystemComponent.objects.create(
-            threat_model=cls.tm, name="Test Component"
+            blueprint=cls.tm.default_blueprint, name="Test Component"
         )
-        cls.threat = ComponentInstanceThreat.objects.create(
-            component=cls.component, inherent_severity="high"
+        cls.threat = create_instance_threat(
+            cls.tm, targets=[cls.component], level="high"
         )
 
     def _add_countermeasure(self, status, effectiveness=None):
@@ -48,9 +44,7 @@ class StatusEffectivenessTestCase(TestCase):
             status=status,
             effectiveness=effectiveness,
         )
-        CountermeasureThreatLink.objects.create(
-            countermeasure=cm, component_threat=self.threat
-        )
+        CountermeasureThreatLink.objects.create(countermeasure=cm, threat=self.threat)
         return cm
 
 
@@ -138,13 +132,12 @@ class ResidualRiskEffectivenessTests(StatusEffectivenessTestCase):
     """Unavailable controls must not retain stale residual-risk credit."""
 
     def setUp(self):
-        self.risk = Risk.objects.create(
-            threat_model=self.tm,
+        self.risk = create_risk(
+            self.tm,
             name="Lifecycle effectiveness risk",
-            inherent_score=100,
-            inherent_level="critical",
+            level="critical",
+            threat_ids=[self.threat.id],
         )
-        RiskThreat.objects.create(risk=self.risk, component_threat=self.threat)
 
     def test_non_credit_statuses_ignore_explicit_effectiveness(self):
         countermeasure = self._add_countermeasure(
@@ -152,11 +145,11 @@ class ResidualRiskEffectivenessTests(StatusEffectivenessTestCase):
             effectiveness=0.9,
         )
 
-        self.assertEqual(compute_residual_score(self.risk), 10)
+        self.assertEqual(countermeasure_effectiveness_for_risk(self.risk), 0.9)
 
         for status in ("gap", "waived", "decommissioned"):
             with self.subTest(status=status):
                 countermeasure.status = status
                 countermeasure.save(update_fields=["status"])
 
-                self.assertEqual(compute_residual_score(self.risk), 100)
+                self.assertEqual(countermeasure_effectiveness_for_risk(self.risk), 0.0)

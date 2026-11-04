@@ -18,10 +18,9 @@ from rest_framework.views import APIView
 
 from apps.threat_models.models import ThreatModel
 from apps.threats.models import (
-    ComponentInstanceThreat,
     CountermeasureThreatLink,
-    DataFlowInstanceThreat,
     InstanceCountermeasure,
+    InstanceThreat,
 )
 
 from .models import StandardFramework
@@ -96,9 +95,20 @@ def _index_countermeasures(
     return idx
 
 
+def _threat_kind(threat: InstanceThreat) -> str:
+    """The kind of a scenario's first target, or ``system`` for a whole-system one.
+
+    The matrix payload predates multi-target scenarios and reports one kind per
+    threat; the first target (by display order) stands in for the scenario.
+    """
+    for target in threat.targets.all():
+        return target.target_kind or "system"
+    return "system"
+
+
 def _index_threats(
     tm: ThreatModel,
-) -> dict[str, list[ComponentInstanceThreat | DataFlowInstanceThreat]]:
+) -> dict[str, list[InstanceThreat]]:
     """Return ``{section_code: [threat, ...]}`` for one TM.
 
     Two paths, unioned per requirement:
@@ -109,52 +119,36 @@ def _index_threats(
       the prototype README warned about; delete it when the canonical
       ``ThreatStandard`` table lands (JJediny/precogly#9).
     """
-    idx: dict[str, list[ComponentInstanceThreat | DataFlowInstanceThreat]] = (
-        defaultdict(list)
-    )
-    seen_per_section: dict[str, set[tuple[str, int]]] = defaultdict(set)
+    idx: dict[str, list[InstanceThreat]] = defaultdict(list)
+    seen_per_section: dict[str, set[int]] = defaultdict(set)
 
-    def _record(threat, code: str, kind: str) -> None:
+    def _record(threat, code: str) -> None:
         if not code:
             return
-        key = (kind, threat.pk)
-        if key in seen_per_section[code]:
+        if threat.pk in seen_per_section[code]:
             return
         idx[code].append(threat)
-        seen_per_section[code].add(key)
+        seen_per_section[code].add(threat.pk)
 
     links = (
         CountermeasureThreatLink.objects.filter(countermeasure__threat_model=tm)
-        .select_related("countermeasure", "component_threat", "flow_threat")
-        .prefetch_related("countermeasure__instance_standard_mappings")
+        .select_related("countermeasure", "threat")
+        .prefetch_related(
+            "countermeasure__instance_standard_mappings", "threat__targets"
+        )
     )
     for link in links:
-        threat = link.component_threat or link.flow_threat
-        if threat is None:
-            continue
-        kind = "component" if link.component_threat else "flow"
         for mapping in link.countermeasure.instance_standard_mappings.all():
-            _record(threat, mapping.section_code, kind)
+            _record(link.threat, mapping.section_code)
 
-    component_threats = ComponentInstanceThreat.objects.filter(
-        component__threat_model=tm
-    )
-    for cit in component_threats:
-        for cid in _cdx_ctrl_ids(cit.format_metadata):
-            _record(cit, cid, "component")
+    for threat in InstanceThreat.objects.filter(threat_model=tm).prefetch_related(
+        "targets"
+    ):
+        for cid in _cdx_ctrl_ids(threat.format_metadata):
+            _record(threat, cid)
             base = cid.split("(", 1)[0]
             if base != cid:
-                _record(cit, base, "component")
-
-    flow_threats = DataFlowInstanceThreat.objects.filter(
-        data_flow__source_component__threat_model=tm
-    )
-    for dfit in flow_threats:
-        for cid in _cdx_ctrl_ids(dfit.format_metadata):
-            _record(dfit, cid, "flow")
-            base = cid.split("(", 1)[0]
-            if base != cid:
-                _record(dfit, base, "flow")
+                _record(threat, base)
 
     return idx
 
@@ -180,9 +174,9 @@ def _cm_payload(ic: InstanceCountermeasure, section_code: str) -> dict:
     cdx = fm.get("cyclonedx") or {}
     poam = cdx.get("poam") or {}
     inheritance = {
-        "is_inherited": bool(cdx.get("is_inherited", ic.is_inherited)),
+        "is_inherited": bool(cdx.get("is_inherited", False)),
         "providing_system": cdx.get("providing_system")
-        or ic.inherited_from_component_name
+        or ic.implemented_by_party
         or "",
         "responsibility_source": cdx.get("responsibility_source", ""),
         "control_type": cdx.get("control_type") or ic.control_nature or "",
@@ -231,9 +225,7 @@ def build_matrix(
         threat_payload = [
             {
                 "id": t.id,
-                "kind": (
-                    "component" if isinstance(t, ComponentInstanceThreat) else "flow"
-                ),
+                "kind": _threat_kind(t),
                 "name": _threat_name(t),
             }
             for t in threats
