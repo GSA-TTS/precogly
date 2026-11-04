@@ -69,6 +69,9 @@ def _flatten(values) -> list:
     return result
 
 
+PORTABLE_PRIORITY_VALUES = {"none", "low", "medium", "high", "critical"}
+
+
 class ControlImporter:
     def __init__(self, document: dict, threat_model, context, *, system_ref):
         self.document = document
@@ -383,6 +386,43 @@ class ControlImporter:
             return None
         return number
 
+    def _priority(self, properties: dict, label: str) -> str:
+        raw = str(properties.get("precogly:priority") or "none").strip().lower()
+        if raw in PORTABLE_PRIORITY_VALUES:
+            return raw
+        self.context.warn(
+            f"Control '{label}': priority '{raw}' is not one of "
+            f"{', '.join(sorted(PORTABLE_PRIORITY_VALUES))}; stored as 'none'."
+        )
+        return "none"
+
+    def _library_for_requirements(self, control: dict):
+        """The one installed library control mapped to every satisfied NIST
+        requirement, or None when there is no match or more than one (#31)."""
+        codes = {
+            info["section_code"]
+            for ref in control.get("satisfies") or []
+            if isinstance(ref, str)
+            and (info := self.requirements.get(ref))
+            and info.get("section_code")
+        }
+        if not codes:
+            return None
+        candidates = None
+        for code in codes:
+            ids = set(
+                CountermeasureLibrary.objects.filter(
+                    standard_mappings__requirement__section_code=code,
+                    standard_mappings__requirement__framework__slug="nist-800-53-r5",
+                ).values_list("pk", flat=True)
+            )
+            candidates = ids if candidates is None else candidates & ids
+            if not candidates:
+                return None
+        if len(candidates) != 1:
+            return None
+        return CountermeasureLibrary.objects.get(pk=next(iter(candidates)))
+
     def _due_date(self, properties: dict, label: str):
         raw = properties.get("precogly:due-date")
         if not raw:
@@ -445,6 +485,8 @@ class ControlImporter:
             library = CountermeasureLibrary.objects.filter(
                 qualified_slug=library_slug
             ).first()
+        if library is None:
+            library = self._library_for_requirements(control)
 
         effectiveness = None
         effectiveness_data = control.get("effectiveness")
@@ -467,7 +509,7 @@ class ControlImporter:
             control_nature=str(properties.get("precogly:control-nature") or "")[:20],
             implemented_by_party=party_text,
             source=str(properties.get("precogly:source") or "")[:255],
-            priority=str(properties.get("precogly:priority") or "none")[:10],
+            priority=self._priority(properties, label),
             due_date=self._due_date(properties, label),
             required_for_release=bool(
                 properties.get("precogly:required-for-release", False)

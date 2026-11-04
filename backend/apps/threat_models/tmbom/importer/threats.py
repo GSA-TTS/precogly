@@ -374,6 +374,10 @@ class ThreatImporter:
     def _import_scenario(self, scenario: dict, index: int) -> None:
         label = _label(scenario, f"scenario {index}")
         threat_refs = [r for r in scenario.get("threats") or [] if isinstance(r, str)]
+        # Pre-2.0 documents used a singular ``threat`` relation.
+        legacy_ref = scenario.get("threat")
+        if isinstance(legacy_ref, str) and legacy_ref not in threat_refs:
+            threat_refs.insert(0, legacy_ref)
         if not threat_refs:
             self.context.warn(
                 f"Scenario '{label}' realizes no threat; stored as custom."
