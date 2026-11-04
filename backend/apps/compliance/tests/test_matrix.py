@@ -12,6 +12,7 @@ from apps.threats.models import (
     CountermeasureThreatLink,
     InstanceCountermeasure,
     InstanceCountermeasureStandard,
+    InstanceThreatStandard,
 )
 from apps.threats.services import create_instance_threat
 
@@ -87,6 +88,18 @@ class ComplianceMatrixTests(APITestCase):
             threat_name="Undetected access",
             level="medium",
             format_metadata={"cyclonedx": {"ctrl_id": "AU-6"}},
+        )
+        cls.canonical_threat = create_instance_threat(
+            cls.tm,
+            targets=[cls.component],
+            threat_name="Canonical unmitigated threat",
+            level="high",
+        )
+        InstanceThreatStandard.objects.create(
+            threat=cls.canonical_threat,
+            requirement=cls.req_au6,
+            section_code="AU-6",
+            framework_name=cls.framework.name,
         )
 
         cls.cm_ac3 = InstanceCountermeasure.objects.create(
@@ -175,7 +188,9 @@ class ComplianceMatrixTests(APITestCase):
         # AU-6 sees:
         #   - "Spoofing" via CountermeasureThreatLink (cm_ac3 maps to AU-6)
         #   - "Undetected access" via its own format_metadata.cyclonedx.ctrl_id
+        #   - "Canonical unmitigated threat" via InstanceThreatStandard (#9)
         assert "Undetected access" in threat_names
+        assert "Canonical unmitigated threat" in threat_names
         # AC-3 sees the flow threat via its own format_metadata.
         ac3 = families["AC"]["requirements"][0]
         flow_names = [t["name"] for t in ac3["threats"] if t["kind"] == "flow"]

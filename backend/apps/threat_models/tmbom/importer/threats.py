@@ -23,9 +23,11 @@ Rules (plan sections 9.3 and 9.4):
 
 from django.utils.text import slugify
 
+from apps.compliance.models import StandardRequirement
 from apps.threat_models.numbering import THREATS, raise_counter_to
 from apps.threats.models import (
     InstanceThreat,
+    InstanceThreatStandard,
     InstanceThreatTaxonomyEntry,
     TaxonomyEntry,
     ThreatLibrary,
@@ -512,7 +514,44 @@ class ThreatImporter:
             self._link_instance_categories(threat, properties, label)
             self._link_sources(threat, properties, abstract_data, label)
             self._link_objectives(threat, properties, abstract_data, label)
+            self._link_standards(threat, scenario, abstract_data)
             self.context.count("threats")
+
+    def _link_standards(self, threat, scenario: dict, abstract_data: dict) -> None:
+        """Populate canonical ``InstanceThreatStandard`` rows from ``ctrl:id`` properties (#9)."""
+        codes: list[str] = []
+        for obj in (abstract_data, scenario):
+            for prop in obj.get("properties") or []:
+                if not isinstance(prop, dict):
+                    continue
+                if prop.get("name") in ("ctrl:id", "precogly:ctrl-id"):
+                    val = str(prop.get("value") or "").strip()
+                    if val and val not in codes:
+                        codes.append(val)
+        for code in codes:
+            section_code = code[:50]
+            requirement = (
+                StandardRequirement.objects.filter(section_code=section_code)
+                .select_related("framework")
+                .first()
+            )
+            if requirement is not None:
+                InstanceThreatStandard.objects.get_or_create(
+                    threat=threat,
+                    requirement=requirement,
+                    defaults={
+                        "section_code": section_code,
+                        "framework_name": requirement.framework.name,
+                        "requirement_description": requirement.description,
+                    },
+                )
+            else:
+                InstanceThreatStandard.objects.get_or_create(
+                    threat=threat,
+                    requirement=None,
+                    section_code=section_code,
+                    defaults={"framework_name": "NIST SP 800-53 Rev. 5"},
+                )
 
     def run(self) -> None:
         if self.document.get("threats") is not None and not self.section:

@@ -347,6 +347,16 @@ SNAPSHOT_FIELDS = {
         ],
         ["id", "created_at", "updated_at"],
     ),
+    "threats.InstanceThreatStandard": (
+        [
+            "threat",
+            "requirement",
+            "section_code",
+            "framework_name",
+            "requirement_description",
+        ],
+        ["id", "created_at", "updated_at"],
+    ),
     "threats.InstanceThreatTaxonomyEntry": (
         ["taxonomy_entry", "threat"],
         ["id", "created_at", "updated_at"],
@@ -536,6 +546,9 @@ ROW_SOURCES = {
     ),
     "threats.InstanceCountermeasureStandard": lambda tm: _rows(
         "threats.InstanceCountermeasureStandard", countermeasure__threat_model=tm
+    ),
+    "threats.InstanceThreatStandard": lambda tm: _rows(
+        "threats.InstanceThreatStandard", threat__threat_model=tm
     ),
     "threats.InstanceThreatTaxonomyEntry": lambda tm: _rows(
         "threats.InstanceThreatTaxonomyEntry", threat__threat_model=tm

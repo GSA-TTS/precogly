@@ -21,6 +21,7 @@ from apps.threats.models import (
     CountermeasureThreatLink,
     InstanceCountermeasure,
     InstanceThreat,
+    InstanceThreatStandard,
 )
 
 from .models import StandardFramework
@@ -140,6 +141,22 @@ def _index_threats(
     for link in links:
         for mapping in link.countermeasure.instance_standard_mappings.all():
             _record(link.threat, mapping.section_code)
+
+    for threat_mapping in (
+        InstanceThreatStandard.objects.filter(threat__threat_model=tm)
+        .select_related("threat", "requirement")
+        .prefetch_related("threat__targets")
+    ):
+        code = threat_mapping.section_code or (
+            threat_mapping.requirement.section_code
+            if threat_mapping.requirement_id
+            else ""
+        )
+        if code:
+            _record(threat_mapping.threat, code)
+            base = code.split("(", 1)[0]
+            if base != code:
+                _record(threat_mapping.threat, base)
 
     for threat in InstanceThreat.objects.filter(threat_model=tm).prefetch_related(
         "targets"

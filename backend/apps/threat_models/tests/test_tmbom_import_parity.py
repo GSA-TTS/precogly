@@ -17,7 +17,11 @@ from apps.compliance.models import (
 from apps.organizations.models import Organization, OrganizationMember
 from apps.threat_models.models import ThreatModel
 from apps.threat_models.tmbom import TmBomAdapter
-from apps.threats.models import CountermeasureLibrary, InstanceCountermeasure
+from apps.threats.models import (
+    CountermeasureLibrary,
+    InstanceCountermeasure,
+    InstanceThreatStandard,
+)
 
 User = get_user_model()
 
@@ -162,14 +166,24 @@ class LegacyScenarioThreatTests(ParityTestCase):
         model, summary = self._import(
             _document(
                 threats={
-                    "threats": [{"bom-ref": "t-1", "name": "Spoofing"}],
+                    "threats": [
+                        {
+                            "bom-ref": "t-1",
+                            "name": "Spoofing",
+                            "properties": [{"name": "ctrl:id", "value": "AC-2"}],
+                        }
+                    ],
                     "scenarios": [{"bom-ref": "s-1", "threat": "t-1"}],
                 }
             )
         )
         warnings = summary.get("warnings", [])
         self.assertFalse(any("realizes no threat" in w for w in warnings))
-        self.assertEqual(model.threats.get().threat_name, "Spoofing")
+        threat = model.threats.get()
+        self.assertEqual(threat.threat_name, "Spoofing")
+        mapping = InstanceThreatStandard.objects.get(threat=threat)
+        self.assertEqual(mapping.requirement, self.ac2)
+        self.assertEqual(mapping.section_code, "AC-2")
 
 
 class ReplaceOnImportTests(ParityTestCase):
