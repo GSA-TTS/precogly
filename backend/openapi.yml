@@ -2540,6 +2540,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/InstanceCountermeasure'
           description: ''
+  /api/countermeasures/{id}/transition/:
+    post:
+      operationId: countermeasures_transition_create
+      description: Apply a server-enforced countermeasure lifecycle transition.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this instance countermeasure.
+        required: true
+      tags:
+      - countermeasures
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceCountermeasure'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InstanceCountermeasure'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InstanceCountermeasure'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceCountermeasure'
+          description: ''
   /api/countermeasures/{id}/unlink/:
     post:
       operationId: countermeasures_unlink_create
@@ -7234,6 +7268,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/ThreatModel'
           description: ''
+  /api/threat-models/{id}/fidelity/:
+    get:
+      operationId: threat_models_fidelity_retrieve
+      description: |-
+        Coverage stats for a threat model's countermeasure instances.
+
+        Lets external CI scripts assert minimum coverage thresholds before
+        accepting a CycloneDX import, without re-deriving the metrics from
+        a raw export. All fractions are 0.0-1.0; ``countermeasures`` is 0
+        when the threat model has no countermeasure instances yet, and
+        every coverage field is then also 0.0 rather than a divide-by-zero
+        error.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this threat model.
+        required: true
+      tags:
+      - threat-models
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreatModel'
+          description: ''
   /api/threat-models/{id}/generate-threats/:
     post:
       operationId: threat_models_generate_threats_create
@@ -9990,6 +10054,26 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/threat-models/{tm_id}/compliance-matrix/:
+    get:
+      operationId: threat_models_compliance_matrix_retrieve
+      description: |-
+        JSON compliance matrix for a single threat model.
+
+        ``GET /api/threat-models/<tm_id>/compliance-matrix/[?framework=<name>][&include_empty=true]``
+      parameters:
+      - in: path
+        name: tm_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - threat-models
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
   /api/threat-models/import/cyclonedx/:
     post:
       operationId: threat_models_import_cyclonedx_create
@@ -11134,7 +11218,6 @@ components:
           description: Seconds to wait for the model before failing with an error.
         isDefault:
           type: boolean
-          default: false
         enabled:
           type: boolean
         apiKey:
@@ -12472,6 +12555,7 @@ components:
             maxLength: 0
         verifiedBy:
           type: integer
+          readOnly: true
           nullable: true
         verifiedByEmail:
           type: string
@@ -12565,6 +12649,7 @@ components:
       - threatLinks
       - threatModel
       - updatedAt
+      - verifiedBy
       - verifiedByEmail
     InstanceCountermeasureStandard:
       type: object
@@ -14414,7 +14499,6 @@ components:
           description: Seconds to wait for the model before failing with an error.
         isDefault:
           type: boolean
-          default: false
         enabled:
           type: boolean
         apiKey:
@@ -15159,6 +15243,7 @@ components:
             maxLength: 0
         verifiedBy:
           type: integer
+          readOnly: true
           nullable: true
         verifiedByEmail:
           type: string
@@ -16217,6 +16302,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ThreatModelReferenceImage'
+          readOnly: true
+        canWrite:
+          type: string
           readOnly: true
         riskScoringMethod:
           allOf:
@@ -17472,6 +17560,9 @@ components:
           items:
             $ref: '#/components/schemas/ThreatModelReferenceImage'
           readOnly: true
+        canWrite:
+          type: string
+          readOnly: true
         riskScoringMethod:
           allOf:
           - $ref: '#/components/schemas/RiskScoringMethodEnum'
@@ -17494,6 +17585,7 @@ components:
       - approvedAt
       - blueprints
       - businessUnitName
+      - canWrite
       - connectedPacks
       - createdAt
       - createdByEmail
