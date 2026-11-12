@@ -262,6 +262,8 @@ class InstanceThreatViewSet(WritableParentsMixin, viewsets.ModelViewSet):
     and ``T7`` or ``7`` matches the number.
     """
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = InstanceThreat.objects.none()
     serializer_class = InstanceThreatSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("threat_model",)
@@ -624,6 +626,8 @@ class InstanceThreatViewSet(WritableParentsMixin, viewsets.ModelViewSet):
 class InstanceCountermeasureViewSet(WritableParentsMixin, viewsets.ModelViewSet):
     """Unified ViewSet for InstanceCountermeasure (component and flow)."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = InstanceCountermeasure.objects.none()
     serializer_class = InstanceCountermeasureSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("threat_model",)
@@ -866,6 +870,8 @@ class InstanceCountermeasureViewSet(WritableParentsMixin, viewsets.ModelViewSet)
 class VerificationTestViewSet(viewsets.ModelViewSet):
     """ViewSet for VerificationTest."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = VerificationTest.objects.none()
     serializer_class = VerificationTestSerializer
     permission_classes = [IsAuthenticated, CanWrite]
 
@@ -888,6 +894,8 @@ class VerificationTestViewSet(viewsets.ModelViewSet):
 class PentestFindingViewSet(WritableParentsMixin, viewsets.ModelViewSet):
     """ViewSet for PentestFinding."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = PentestFinding.objects.none()
     serializer_class = PentestFindingSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("threat_model",)
@@ -918,6 +926,8 @@ class InstanceCountermeasureStandardViewSet(
     These mappings override library-level compliance mappings for specific countermeasure instances.
     """
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = InstanceCountermeasureStandard.objects.none()
     serializer_class = InstanceCountermeasureStandardSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("countermeasure",)
@@ -941,6 +951,8 @@ class InstanceCountermeasureStandardViewSet(
 class InstanceThreatTaxonomyEntryViewSet(WritableParentsMixin, viewsets.ModelViewSet):
     """CRUD for instance-level taxonomy entries on threat scenarios."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = InstanceThreatTaxonomyEntry.objects.none()
     serializer_class = InstanceThreatTaxonomyEntrySerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("threat",)
@@ -983,6 +995,8 @@ class TaxonomyEntryViewSet(viewsets.ReadOnlyModelViewSet):
 class RiskViewSet(viewsets.ModelViewSet):
     """ViewSet for Risk CRUD operations, nested under threat models."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = Risk.objects.none()
     permission_classes = [IsAuthenticated, CanWrite]
     filter_backends = [
         DjangoFilterBackend,
@@ -1186,6 +1200,8 @@ class RiskViewSet(viewsets.ModelViewSet):
 class RiskResponseViewSet(viewsets.ModelViewSet):
     """Responses of one risk: ``/api/threat-models/{id}/risks/{risk_id}/responses/``."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = RiskResponse.objects.none()
     serializer_class = RiskResponseSerializer
     permission_classes = [IsAuthenticated, CanWrite]
 
@@ -1221,6 +1237,8 @@ class RiskResponseViewSet(viewsets.ModelViewSet):
 class CountermeasureCommentViewSet(WritableParentsMixin, viewsets.ModelViewSet):
     """ViewSet for CountermeasureComment (comment/history log on countermeasures)."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = CountermeasureComment.objects.none()
     serializer_class = CountermeasureCommentSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     writable_parent_fields = ("countermeasure",)
@@ -1239,6 +1257,8 @@ class CountermeasureCommentViewSet(WritableParentsMixin, viewsets.ModelViewSet):
 class ThreatPersonaViewSet(viewsets.ModelViewSet):
     """CRUD ViewSet for ThreatPersona, scoped to a threat model."""
 
+    # drf-spectacular reads the model from here; requests go through get_queryset().
+    queryset = ThreatPersona.objects.none()
     serializer_class = ThreatPersonaSerializer
     permission_classes = [IsAuthenticated, CanWrite]
     pagination_class = None

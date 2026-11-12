@@ -1392,6 +1392,7 @@ class ThreatModelListSerializer(ThreatModelFieldsMixin, serializers.ModelSeriali
             "id",
             "name",
             "description",
+            "organization",
             "criticality",
             "owner",
             "owning_team",
