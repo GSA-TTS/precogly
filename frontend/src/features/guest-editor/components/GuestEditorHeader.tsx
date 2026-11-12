@@ -384,9 +384,13 @@ export function GuestEditorHeader({
             ) : (
               <button
                 onClick={handleTitleClick}
-                className="flex items-center gap-2 group text-left"
+                title={title}
+                // A button sizes to its content, and a flex item will not shrink below
+                // its text, so without both min-w-0s the title overflows the 240px
+                // column and runs under the controls beside it (#563).
+                className="flex w-full min-w-0 items-center gap-2 group text-left"
               >
-                <h1 className="font-semibold truncate">{title}</h1>
+                <h1 className="min-w-0 font-semibold truncate">{title}</h1>
                 <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity shrink-0" />
               </button>
             )}
@@ -414,10 +418,12 @@ export function GuestEditorHeader({
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Guided Walkthrough"
                 onClick={() => setShowWalkthroughWizard(true)}
               >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5 text-teal-600" />
-                Guided Walkthrough
+                <Sparkles className="h-3.5 w-3.5 text-teal-600 2xl:mr-1.5" />
+                {/* Icon-only below 2xl so the title keeps room at 1300px (#563). */}
+                <span className="hidden 2xl:inline">Guided Walkthrough</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>FIPS 199 categorization, pack architecture, and NIST 800-53 baseline wizard</TooltipContent>
