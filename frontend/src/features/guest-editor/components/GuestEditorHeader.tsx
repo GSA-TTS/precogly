@@ -418,10 +418,12 @@ export function GuestEditorHeader({
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Guided Walkthrough"
                 onClick={() => setShowWalkthroughWizard(true)}
               >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5 text-teal-600" />
-                Guided Walkthrough
+                <Sparkles className="h-3.5 w-3.5 text-teal-600 2xl:mr-1.5" />
+                {/* Icon-only below 2xl so the title keeps room at 1300px (#563). */}
+                <span className="hidden 2xl:inline">Guided Walkthrough</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>FIPS 199 categorization, pack architecture, and NIST 800-53 baseline wizard</TooltipContent>
