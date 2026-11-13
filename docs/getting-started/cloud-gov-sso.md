@@ -89,6 +89,7 @@ imports cleanly:
 ```python
 def _oidc_urls():
     from apps.core.sso_views import SsoTokenHandoffView
+
     return [
         path("oidc/", include("mozilla_django_oidc.urls")),
         path("sso/handoff/", SsoTokenHandoffView.as_view(), name="sso-handoff"),
