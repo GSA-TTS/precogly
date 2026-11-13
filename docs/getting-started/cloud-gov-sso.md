@@ -176,7 +176,7 @@ SPA build-time variables:
     - Web origins: `https://<api-host>`
 3. **Identity provider**: alias `cloudgov`
     - Type: OpenID Connect v1.0
-    - Discovery URL: `https://idp.fr.cloud.gov/.well-known/openid-configuration`
+    - Discovery URL: `https://login.fr.cloud.gov/.well-known/openid-configuration`
     - Client ID / secret provisioned via a cloud.gov OIDC service instance.
 4. Optional: add a first-broker-login flow that auto-selects the `cloudgov`
    IdP so users are not shown the Keycloak username/password form.
