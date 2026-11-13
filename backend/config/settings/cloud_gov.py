@@ -12,8 +12,9 @@ _production_databases = DATABASES  # noqa: F405
 
 env = environ.Env()
 
-# Public route; Diego health checks originate from arbitrary cell IPs
-ALLOWED_HOSTS = ["*"]
+# Only the public API route is served. Diego's health check probes the instance
+# IP, so apps.core.health_host rewrites that Host for /api/health/ alone.
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -22,6 +23,8 @@ MIDDLEWARE = list(_production_middleware)
 if "whitenoise.middleware.WhiteNoiseMiddleware" not in MIDDLEWARE:
     _sec_idx = MIDDLEWARE.index("django.middleware.security.SecurityMiddleware")
     MIDDLEWARE.insert(_sec_idx + 1, "whitenoise.middleware.WhiteNoiseMiddleware")
+if "apps.core.health_host.DiegoHealthCheckHostMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "apps.core.health_host.DiegoHealthCheckHostMiddleware")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MAX_AGE = 60 * 60 * 24 * 30
 STATIC_URL = "/static/"
