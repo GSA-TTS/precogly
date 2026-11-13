@@ -89,6 +89,7 @@ imports cleanly:
 ```python
 def _oidc_urls():
     from apps.core.sso_views import SsoTokenHandoffView
+
     return [
         path("oidc/", include("mozilla_django_oidc.urls")),
         path("sso/handoff/", SsoTokenHandoffView.as_view(), name="sso-handoff"),
@@ -176,7 +177,7 @@ SPA build-time variables:
     - Web origins: `https://<api-host>`
 3. **Identity provider**: alias `cloudgov`
     - Type: OpenID Connect v1.0
-    - Discovery URL: `https://idp.fr.cloud.gov/.well-known/openid-configuration`
+    - Discovery URL: `https://login.fr.cloud.gov/.well-known/openid-configuration`
     - Client ID / secret provisioned via a cloud.gov OIDC service instance.
 4. Optional: add a first-broker-login flow that auto-selects the `cloudgov`
    IdP so users are not shown the Keycloak username/password form.
