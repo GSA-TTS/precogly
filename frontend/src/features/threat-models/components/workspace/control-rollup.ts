@@ -27,7 +27,7 @@ export function readControlRollup(metadata: unknown): ControlRollupEntry[] {
     const status = row.aggregateStatus ?? row.aggregate_status
     const count = row.cmCount ?? row.cm_count
     if (typeof controlId !== 'string' || !/^[A-Z]{2}-\d+(?:\(\d+\))?$/.test(controlId) || seen.has(controlId)) return []
-    if (typeof status !== 'string' || !['gap', 'recommended', 'planned', 'in-progress', 'in_progress', 'implemented', 'verified', 'waived', 'platform', 'decommissioned'].includes(status)) return []
+    if (typeof status !== 'string' || !['gap', 'recommended', 'planned', 'in-progress', 'in_progress', 'implemented', 'verified', 'rejected', 'waived', 'platform', 'decommissioned'].includes(status)) return []
     if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) return []
     seen.add(controlId)
     result.push({ controlId, aggregateStatus: status, countermeasureCount: count })

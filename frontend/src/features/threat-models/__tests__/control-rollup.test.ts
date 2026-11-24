@@ -20,9 +20,18 @@ it('supports foreign property and camel-case row shapes', () => {
 })
 
 it('preserves generator statuses rather than converting them to implementation claims', () => {
-  for (const aggregate_status of ['recommended', 'in-progress', 'waived']) {
+  for (const aggregate_status of ['recommended', 'in-progress', 'rejected', 'waived']) {
     expect(readControlRollup(metadata([{ ...rows[0], aggregate_status }]))[0].aggregateStatus).toBe(aggregate_status)
   }
+})
+
+it('keeps the full table when a rejected control accompanies another status', () => {
+  const mixed = [rows[0], { control_id: 'AC-2', aggregate_status: 'rejected', cm_count: 1 }]
+  expect(readControlRollup(metadata(mixed))).toHaveLength(2)
+  const html = renderToStaticMarkup(createElement(ControlRollup, { metadata: metadata(mixed) }))
+  expect(html).toContain('AC-1')
+  expect(html).toContain('AC-2')
+  expect(html).toContain('rejected')
 })
 
 it('rejects malformed, ambiguous, duplicate or untrusted row values', () => {
