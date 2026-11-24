@@ -35,6 +35,7 @@ SIGNED_IN_ONLY_THREAT_KEYS = {
     "access_level",
 }
 SIGNED_IN_ONLY_COUNTERMEASURE_KEYS = {
+    "format_metadata",
     "due_date",
     "external_ticket_url",
     "display_order",
@@ -47,6 +48,28 @@ SIGNED_IN_ONLY_COUNTERMEASURE_KEYS = {
 
 
 class AnalysisPayloadTestCase(TestCase):
+    def test_source_metadata_is_preserved_only_for_signed_in_audience(self):
+        metadata = {
+            "cyclonedx": {
+                "providing_system": "Platform",
+                "responsibility_source": "crm",
+            }
+        }
+        self.countermeasure.format_metadata = metadata
+        self.countermeasure.save(update_fields=["format_metadata"])
+        payload = build_threat_analysis(self.threat_model)
+        controls = [
+            cm for threat in payload["threats"] for cm in threat["countermeasures"]
+        ]
+        self.assertTrue(controls)
+        own_controls = [cm for cm in controls if cm["id"] == self.countermeasure.id]
+        self.assertTrue(own_controls)
+        self.assertEqual(own_controls[0]["format_metadata"], metadata)
+        shared = build_threat_analysis(self.threat_model, audience=SHARED)
+        for threat in shared["threats"]:
+            for cm in threat["countermeasures"]:
+                self.assertNotIn("format_metadata", cm)
+
     @classmethod
     def setUpTestData(cls):
         cls.organization = Organization.objects.create(name="Org", domain="org.test")

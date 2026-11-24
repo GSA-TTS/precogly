@@ -36,6 +36,7 @@ import { UserSearchCombobox } from './UserSearchCombobox'
 import { WaiverReasonInput } from './WaiverReasonInput'
 import { NumberBadge } from './NumberBadge'
 import { EditTargetsDialog } from './EditTargetsDialog'
+import { inheritanceMetadata } from './inheritance-metadata'
 import {
   PRIORITY_CONFIG,
   effectivenessFromInput,
@@ -107,6 +108,7 @@ function CountermeasureDetailContent({
 }: Omit<CountermeasureDetailDialogProps, 'countermeasure'> & { countermeasure: AnalysisCountermeasure }) {
   const backendId = countermeasure.backendCountermeasureId ?? null
   const name = countermeasure.countermeasureName || countermeasure.countermeasureId
+  const inheritance = inheritanceMetadata(countermeasure.formatMetadata, countermeasure.implementedByParty)
 
   const [assigningOwner, setAssigningOwner] = useState(false)
   const [pendingPlanned, setPendingPlanned] = useState(false)
@@ -195,6 +197,16 @@ function CountermeasureDetailContent({
           </div>
         )}
       </Section>
+
+      {(inheritance.providingSystem || inheritance.responsibilitySource) && (
+        <Section title="Declared inheritance source">
+          <dl className="text-sm">
+            {inheritance.providingSystem && <div><dt className="inline font-medium">Providing system: </dt><dd className="inline">{inheritance.providingSystem}</dd></div>}
+            {inheritance.responsibilitySource && <div><dt className="inline font-medium">Responsibility source: </dt><dd className="inline">{inheritance.responsibilitySource}</dd></div>}
+          </dl>
+          <p className="text-xs text-muted-foreground">Imported source metadata is not verification of deployed controls.</p>
+        </Section>
+      )}
 
       {(countermeasure.countermeasureDescription || hasType) && (
         <Section title="Description and type">
