@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { ControlRollup } from './workspace/ControlRollup'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -139,6 +140,7 @@ export function OverviewTab({
       </OverviewSection>
 
       <ReviewCard threatModelId={threatModelId} threatModelName={threatModel.name} isSecurityTeam={isSecurityTeam} />
+      <ControlRollup metadata={threatModel.formatMetadata} />
 
       <OverviewDetailButtons
         threatModel={threatModel}
