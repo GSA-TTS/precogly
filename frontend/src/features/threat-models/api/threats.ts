@@ -839,6 +839,7 @@ export interface AnalysisStandardMapping {
 
 /** One countermeasure entry of the analysis payload, as the backend sends it. */
 export interface AnalysisPayloadCountermeasure {
+  formatMetadata?: Record<string, unknown>
   id: number
   countermeasureLibraryId: number | null
   countermeasureName: string | null
@@ -936,6 +937,7 @@ export function transformAnalysisThreats(payloadThreats: AnalysisPayloadThreat[]
       targets: cm.targets ?? [],
       implementedBy: cm.implementedBy ?? [],
       implementedByParty: cm.implementedByParty || undefined,
+      formatMetadata: cm.formatMetadata,
       source: cm.source || undefined,
       countermeasureName: cm.countermeasureName || undefined,
       countermeasureDescription: cm.countermeasureDescription || undefined,

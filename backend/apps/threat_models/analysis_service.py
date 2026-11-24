@@ -416,6 +416,7 @@ def serialize_countermeasures_from_links(links, *, index=None, also_mitigates=No
                     link.component_id for link in countermeasure.provider_links.all()
                 ],
                 "implemented_by_party": countermeasure.implemented_by_party,
+                "format_metadata": countermeasure.format_metadata or {},
                 "source": countermeasure.source,
                 "also_mitigates": _also_mitigates(
                     countermeasure, link.id, also_mitigates

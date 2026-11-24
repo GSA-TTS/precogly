@@ -8,6 +8,7 @@ import { GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { COUNTERMEASURE_STATUS_CONFIG, type AnalysisCountermeasure, type CountermeasureStatus } from '../../types/threat-analysis'
 import { NumberBadge } from './NumberBadge'
+import { inheritanceMetadata } from './inheritance-metadata'
 
 /** Assignee type for the combobox: individuals only. */
 export type Assignee = { type: 'member'; userId: number; email: string; name: string | null }
@@ -33,6 +34,7 @@ export interface CountermeasureCardProps {
 
 export function CountermeasureCard({ countermeasure, dragHandleRef, isOpen, onOpen }: CountermeasureCardProps) {
   const name = countermeasure.countermeasureName || countermeasure.countermeasureId
+  const inheritance = inheritanceMetadata(countermeasure.formatMetadata, countermeasure.implementedByParty)
   return (
     <div
       className={cn(
@@ -58,7 +60,16 @@ export function CountermeasureCard({ countermeasure, dragHandleRef, isOpen, onOp
       >
         <CountermeasureStatusDot status={countermeasure.status} className="w-[84px]" />
         <NumberBadge number={countermeasure.displayNumber} />
-        <span className="truncate text-sm font-medium">{name}</span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-medium">{name}</span>
+          {(inheritance.providingSystem || inheritance.responsibilitySource) && (
+            <span className="block truncate text-xs text-muted-foreground">
+              {inheritance.providingSystem && `Declared provider: ${inheritance.providingSystem}`}
+              {inheritance.providingSystem && inheritance.responsibilitySource && ' · '}
+              {inheritance.responsibilitySource && `Source: ${inheritance.responsibilitySource}`}
+            </span>
+          )}
+        </span>
       </button>
     </div>
   )

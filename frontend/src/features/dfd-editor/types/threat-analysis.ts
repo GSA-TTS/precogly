@@ -142,6 +142,7 @@ export interface AlsoMitigatesEntry {
  * never change a threat's status (L4).
  */
 export interface AnalysisCountermeasure {
+  formatMetadata?: Record<string, unknown>
   id: string
   // Reference to countermeasure definition (e.g., "lib-123" for backend)
   countermeasureId: string
